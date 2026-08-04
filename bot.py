@@ -63,6 +63,7 @@ def home():
         "👉 <a href='/test/regalos'>Probar Regalos del Día</a><br>"
         "👉 <a href='/test/saludo'>Probar Saludo Matutino</a><br>"
         "👉 <a href='/test/bcv'>Probar Tasa Oficial BCV</a><br>"
+        "👉 <a href='/test/sorteo'>Probar Cierre de Sorteo (Min 25/55)</a><br>"
         "👉 <a href='/test/cierre'>Probar Mensaje de Cierre (8:00 PM)</a>"
     )
 
@@ -96,6 +97,11 @@ def test_bcv():
 def test_cierre():
     enviar_mensaje_cierre()
     return "Prueba de Cierre de Jornada ejecutada."
+
+@app.route('/test/sorteo')
+def test_sorteo():
+    enviar_aviso_cierre_sorteo()
+    return "Prueba de Cierre de Sorteo ejecutada."
 
 def limpiar_texto(texto):
     return " ".join(texto.split())
