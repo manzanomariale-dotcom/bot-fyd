@@ -23,11 +23,11 @@ URL_BCV = "https://www.bcv.org.ve/"
 ARCH_REGISTRO = "resultados_enviados.json"
 
 HEADER_FyD = (
-    "*Resultado: AGENCIA FyD*\n"
+    "Resultado: AGENCIA FyD\n"
     "JUEGA AQUI\n"
-    "*RESULTADOS ANIMALITOS*\n\n"
+    "RESULTADOS ANIMALITOS\n\n"
     "🎲 *{nombre_loteria}* 🎲\n"
-    "Hora: *{hora}*\n"
+    "Hora: {hora}\n"
     "Animalito: *{resultado}*\n\n"
     f"{ENLACE_CANAL}"
 )
@@ -37,7 +37,7 @@ app = Flask("")
 
 @app.route("/")
 def home():
-  return "Bot Agencia FyD activo y con control estricto anti-repetición."
+  return "Bot Agencia FyD activo y escaneando."
 
 
 @app.route("/test/madrugada")
@@ -76,19 +76,10 @@ def test_cierre():
   return "Prueba de cierre ejecutada."
 
 
-@app.route("/test/probar-envio")
-def probar_envio():
-  mensaje = (
-      "Resultado: AGENCIA FyD\n"
-      "JUEGA AQUI\n"
-      "RESULTADOS ANIMALITOS\n\n"
-      "🎲 *LOTTO ACTIVO* 🎲\n"
-      "Hora: 09:00 AM\n"
-      "Animalito: *12 - Caballo*\n\n"
-      f"{ENLACE_CANAL}"
-  )
-  enviar_telegram(mensaje)
-  return "Prueba de envío forzado ejecutada."
+@app.route("/test/forzar")
+def test_forzar():
+  verificar_y_enviar_resultados_individuales()
+  return "Revisión forzada ejecutada. Revisa los logs."
 
 
 def limpiar_texto(texto):
@@ -228,9 +219,9 @@ def enviar_tasa_dolar():
     precio_dolar = "742,23"
     if response.status_code == 200:
       soup = BeautifulSoup(response.text, "html.parser")
-    dolar_div = soup.find("div", id="dolar")
-    if dolar_div and dolar_div.find("strong"):
-      precio_dolar = dolar_div.find("strong").get_text(strip=True)
+      dolar_div = soup.find("div", id="dolar")
+      if dolar_div and dolar_div.find("strong"):
+        precio_dolar = dolar_div.find("strong").get_text(strip=True)
     enviar_telegram(
         f"*💵 TASA OFICIAL BCV 💵*\n📈 Precio Oficial: Bs."
         f" {precio_dolar}\nVerifica la tasa oficial en: {URL_BCV}"
@@ -280,18 +271,15 @@ def verificar_y_enviar_resultados_individuales():
         )
     }
     respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
+    print(f"Estado HTTP Lotería: {respuesta.status_code}")
     if respuesta.status_code != 200:
       return
 
     soup = BeautifulSoup(respuesta.text, "html.parser")
     tarjetas = soup.find_all(
-        ["div", "article", "section", "li"],
-        class_=re.compile(
-            r"card|box|item|lotto|result|result-item|sorteo", re.IGNORECASE
-        ),
-    )
-    if not tarjetas:
-      tarjetas = soup.find_all(["div", "section"])
+        ["div", "article", "section", "li", "tr", "td"]
+    )  # Busca cualquier contenedor
+    print(f"Bloques encontrados en la web: {len(tarjetas)}")
 
     hubo_cambios = False
 
@@ -299,10 +287,7 @@ def verificar_y_enviar_resultados_individuales():
       texto_tarjeta = tarjeta.get_text(" | ", strip=True).upper()
 
       match_h = re.search(r"(\d{1,2}:\d{2}\s*(?:AM|PM))", texto_tarjeta)
-      match_res = re.search(
-          r"(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)",
-          texto_tarjeta,
-      )
+      match_res = re.search(r"(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+)", texto_tarjeta)
 
       if not match_h or not match_res:
         continue
@@ -310,34 +295,28 @@ def verificar_y_enviar_resultados_individuales():
       hora = match_h.group(1).upper()
       resultado = limpiar_texto(match_res.group(1)).upper()
 
-      # Filtramos por si dice pendiente o no tiene animalito real
       if "PENDIENTE" in resultado or len(resultado) < 3:
         continue
 
-      # Intentamos extraer el nombre de la lotería limpiando etiquetas
-      nombre_loteria = ""
-      posibles_titulos = tarjeta.find_all(
-          ["h1", "h2", "h3", "h4", "h5", "span", "strong", "b", "div"]
-      )
-      for pt in posibles_titulos:
-        t_text = pt.get_text(" ", strip=True).upper()
+      # Extraemos cualquier texto inicial que sirva como nombre de lotería
+      partes = texto_tarjeta.split("|")
+      nombre_loteria = "LOTERIA"
+      for p in partes:
+        p_limpio = limpiar_texto(p)
         if (
-            3 <= len(t_text) <= 25
-            and not re.search(r"\d{1,2}:\d{2}", t_text)
-            and "PENDIENTE" not in t_text
-            and "WINBIG" not in t_text
-            and not any(p in t_text for p in [" - ", "AGENCIA", "FyD"])
+            3 <= len(p_limpio) <= 25
+            and not re.search(r"\d{1,2}:\d{2}", p_limpio)
+            and "WINBIG" not in p_limpio
+            and "RESULTADOS" not in p_limpio
+            and "PENDIENTE" not in p_limpio
         ):
-          nombre_loteria = t_text
+          nombre_loteria = p_limpio
           break
 
-      if not nombre_loteria:
-        continue  # Si no detecta nombre de lotería válido, salta para evitar genéricos repetidos
-
-      # Llave única estricta combinando Lotería + Hora + Animalito exacto
       id_resultado = f"{nombre_loteria}_{hora}_{resultado}"
 
       if id_resultado not in enviados_hoy:
+        print(f"¡Nuevo resultado detectado!: {nombre_loteria} - {hora} - {resultado}")
         mensaje = HEADER_FyD.format(
             nombre_loteria=nombre_loteria, hora=hora, resultado=resultado
         )
