@@ -23,11 +23,11 @@ URL_BCV = "https://www.bcv.org.ve/"
 ARCH_REGISTRO = "resultados_enviados.json"
 
 HEADER_FyD = (
-    "Resultado: AGENCIA FyD\n"
+    "*Resultado: AGENCIA FyD*\n"
     "JUEGA AQUI\n"
-    "RESULTADOS ANIMALITOS\n\n"
+    "*RESULTADOS ANIMALITOS*\n\n"
     "🎲 *{nombre_loteria}* 🎲\n"
-    "Hora: {hora}\n"
+    "Hora: *{hora}*\n"
     "Animalito: *{resultado}*\n\n"
     f"{ENLACE_CANAL}"
 )
