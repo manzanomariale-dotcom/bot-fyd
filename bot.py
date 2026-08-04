@@ -255,6 +255,14 @@ def enviar_mensaje_cierre():
         disable_web_preview=True
     )
 
+def enviar_aviso_cierre_sorteo():
+    enviar_telegram(
+        "🎯 *AGENCIA FyD* 🎯\n"
+        "_Trabajamos para tí_\n\n"
+        "⏰ *Sorteo cerrado. ¡Mucha suerte en sus apuestas!* 🍀",
+        disable_web_preview=True
+    )
+
 def cargar_registros():
     if os.path.exists(ARCH_REGISTRO):
         try:
@@ -366,15 +374,24 @@ def verificar_y_enviar_resultados_individuales():
     except Exception as e:
         print(f"Error al verificar resultados individuales: {e}")
 
+def verificar_minuto():
+    ahora = datetime.now()
+    minuto_actual = ahora.minute
+    if minuto_actual in [25, 55]:
+        enviar_aviso_cierre_sorteo()
+        time.sleep(65)
+
 def loop_bot():
     schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
     schedule.every().day.at("06:45").do(enviar_regalos_diarios)
     schedule.every().day.at("07:00").do(enviar_saludo_matutino)
+    schedule.every().day.at("06:30").do(enviar_tasa_dolar)
     schedule.every().day.at("18:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
     
     schedule.every(1).minute.do(verificar_y_enviar_resultados_individuales)
+    schedule.every(1).minute.do(verificar_minuto)
 
     while True:
         try:
