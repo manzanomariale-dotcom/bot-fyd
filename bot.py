@@ -37,7 +37,7 @@ app = Flask("")
 
 @app.route("/")
 def home():
-  return "Bot Agencia FyD activo y en línea."
+  return "Bot Agencia FyD activo y con nombres de lotería ajustados."
 
 
 @app.route("/test/madrugada")
@@ -78,11 +78,8 @@ def test_cierre():
 
 @app.route("/test/forzar")
 def test_forzar():
-  """Ruta manual para forzar la revisión y envío inmediato desde el navegador"""
   verificar_y_enviar_resultados_individuales()
-  return (
-      "Revisión de resultados forzada ejecutada. Revisa el canal y los logs."
-  )
+  return "Revisión forzada ejecutada con captura estricta de nombres."
 
 
 def limpiar_texto(texto):
@@ -113,7 +110,7 @@ def enviar_saludo_madrugada():
 
 def generar_piramide():
   ahora = datetime.now()
-  fecha_str = ah_str = ahora.strftime("%d/%m/%Y")
+  fecha_str = ahora.strftime("%d/%m/%Y")
   digitos = [int(c) for c in fecha_str if c.isdigit()]
   filas = [digitos]
   while len(filas[-1]) > 1:
@@ -275,37 +272,69 @@ def verificar_y_enviar_resultados_individuales():
     }
     respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
     if respuesta.status_code != 200:
-      print(f"Error HTTP lotería: {respuesta.status_code}")
       return
 
     soup = BeautifulSoup(respuesta.text, "html.parser")
-    # Buscamos todos los textos posibles o elementos de la página
-    textos = [
-        t.get_text(" ", strip=True) for t in soup.find_all(["div", "span", "p"])
-    ]
-    texto_completo = " ".join(textos).upper()
 
-    print(
-        f"DEBUG: Longitud texto extraído: {len(texto_completo)}"
-    )  # Para verlo en los logs de Render
-
-    # Buscamos patrones del tipo: Lotería ... Hora ... Número - Animalito
-    # O buscamos bloques que contengan horas y animalitos de forma flexible
-    # Intento de extracción general de horas y animalitos cercanos
-    coincidencias = re.findall(
-        r"(\d{1,2}:\d{2}\s*(?:AM|PM))\D{1,30}(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+)",
-        texto_completo,
+    # Buscamos bloques individuales (tarjetas o contenedores de cada sorteo)
+    tarjetas = soup.find_all(
+        ["div", "article", "section", "li"],
+        class_=re.compile(
+            r"card|box|item|lotto|result|result-item|sorteo", re.IGNORECASE
+        ),
     )
+    if not tarjetas:
+      tarjetas = soup.find_all(
+          ["div", "section"]
+      )  # Fallback a contenedores generales
 
     hubo_cambios = False
-    for hora_match, res_match in coincidencias:
-      hora = hora_match.upper()
-      resultado = limpiar_texto(res_match).upper()
-      nombre_loteria = (
-          "WINBIG"  # Nombre genérico de respaldo si no se aísla la lotería
+
+    for tarjeta in tarjetas:
+      texto_tarjeta = tarjeta.get_text(" | ", strip=True).upper()
+
+      # Verificamos que contenga una hora y un resultado de animalito
+      match_h = re.search(r"(\d{1,2}:\d{2}\s*(?:AM|PM))", texto_tarjeta)
+      match_res = re.search(
+          r"(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)",
+          texto_tarjeta,
       )
 
-      id_resultado = f"{hora}_{resultado}"
+      if not match_h or not match_res:
+        continue
+
+      hora = match_h.group(1).upper()
+      resultado = limpiar_texto(match_res.group(1)).upper()
+
+      # Intentamos extraer el nombre de la lotería limpiando palabras basura
+      nombre_loteria = "WINBIG"
+      palabras_ignorar = [
+          "WINBIG",
+          "RESULTADOS",
+          "PENDIENTE",
+          "SORTEO",
+          "ANIMALITOS",
+          hora,
+          resultado,
+      ]
+
+      # Buscamos encabezados o textos cortos dentro de la tarjeta que sirvan de título
+      posibles_titulos = tarjeta.find_all(
+          ["h1", "h2", "h3", "h4", "h5", "span", "strong", "b", "div"]
+      )
+      for pt in posibles_titulos:
+        t_text = pt.get_text(" ", strip=True).upper()
+        if (
+            3 <= len(t_text) <= 30
+            and not re.search(r"\d{1,2}:\d{2}", t_text)
+            and "PENDIENTE" not in t_text
+            and t_text not in palabras_ignorar
+            and not any(p in t_text for p in [" - ", "AGENCIA", "FyD"])
+        ):
+          nombre_loteria = t_text
+          break
+
+      id_resultado = f"{nombre_loteria}_{hora}_{resultado}"
 
       if id_resultado not in enviados_hoy:
         mensaje = HEADER_FyD.format(
