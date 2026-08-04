@@ -40,6 +40,17 @@ URL_BCV = 'https://www.bcv.org.ve/'
 # Archivo local para control de registros persistentes y evitar duplicados
 ARCH_REGISTRO = "resultados_enviados.json"
 
+# Diccionario de abreviaturas oficiales solicitadas
+TRADUCCION_LOTERIAS = {
+    "L.A": "LOTTO ACTIVO",
+    "GRJ": "GRANJITA",
+    "S.P": "SELVA PLUS",
+    "L.RE": "LOTTO REAL",
+    "GHO": "GUACHARO",
+    "L.CH": "LOTTO CHAIMA",
+    "MJ.M": "MONJE MILLONARIO"
+}
+
 HEADER_FyD = (
     "Resultado: *AGENCIA FyD*\n"
     "Hora: {hora_str}\n"
@@ -330,6 +341,12 @@ def verificar_y_enviar_resultados_individuales():
 
             nombre_loteria = limpiar_texto(nombre_loteria)
             
+            # Aplicar traducción si coincide con las siglas
+            for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
+                if sigla in nombre_loteria.upper() or nombre_loteria.upper() == sigla:
+                    nombre_loteria = nombre_largo
+                    break
+
             if "RULETA ROYAL" in nombre_loteria.upper() or "RESULTADOS" in nombre_loteria.upper():
                 continue
 
@@ -342,7 +359,7 @@ def verificar_y_enviar_resultados_individuales():
                 if "PENDIENTE" in texto_slot:
                     continue
 
-                match_h = re.search(r'(\d{1,2}:\d{2}\s*(?:AM|PM))', texto_slot)
+                match_h = re.search(r'\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b', texto_slot)
                 if not match_h:
                     continue
                 hora = match_h.group(1).upper()
@@ -393,12 +410,12 @@ def verificar_minuto():
             ultimo_aviso_minuto = clave_tiempo
 
 # ==========================================
-# NUEVO: COMANDO PARA RESUMEN POR LOTERÍAS
+# COMANDOS /resumen Y /tabla PARA REPORTE PRIVADO
 # ==========================================
-@bot.message_handler(commands=['resumen'])
+@bot.message_handler(commands=['resumen', 'tabla'])
 def cmd_resumen(message):
     try:
-        bot.reply_to(message, "🔍 Consultando resultados actuales, por favor espera un momento...")
+        bot.reply_to(message, "🔍 Consultando tabla de resultados actual, por favor espera...")
         
         headers = {'User-Agent': 'Mozilla/5.0'}
         respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
@@ -433,6 +450,13 @@ def cmd_resumen(message):
                 continue
 
             nombre_loteria = limpiar_texto(nombre_loteria)
+            
+            # Aplicar traducción a nombre oficial
+            for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
+                if sigla in nombre_loteria.upper() or nombre_loteria.upper() == sigla:
+                    nombre_loteria = nombre_largo
+                    break
+
             if "RULETA ROYAL" in nombre_loteria.upper() or "RESULTADOS" in nombre_loteria.upper():
                 continue
 
@@ -446,7 +470,7 @@ def cmd_resumen(message):
             for slot in slots_sorteo:
                 texto_slot = slot.get_text(" ", strip=True).upper()
                 
-                match_h = re.search(r'(\d{1,2}:\d{2}\s*(?:AM|PM))', texto_slot)
+                match_h = re.search(r'\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b', texto_slot)
                 if not match_h:
                     continue
                 hora = match_h.group(1).upper()
@@ -463,9 +487,14 @@ def cmd_resumen(message):
             bot.reply_to(message, "⚠️ No se encontraron resultados disponibles en este momento.")
             return
 
-        # Construir el mensaje final agrupado
+        # Construcción del mensaje con el Encabezado Oficial de la Agencia FyD
         fecha_hoy = datetime.now().strftime("%d/%m/%Y")
-        texto_final = f"📊 *RESUMEN DE RESULTADOS* 📊\n📅 Fecha: {fecha_hoy}\n\n"
+        texto_final = (
+            "🎯 *AGENCIA FyD* 🎯\n"
+            "_Trabajamos para tí_\n\n"
+            "📊 *TABLA RESUMEN DE RESULTADOS* 📊\n"
+            f"📅 Fecha: {fecha_hoy}\n\n"
+        )
 
         for loteria, items in resumen_por_loterias.items():
             texto_final += f"🎲 *{loteria}*:\n"
@@ -473,7 +502,8 @@ def cmd_resumen(message):
                 texto_final += f"  {item}\n"
             texto_final += "\n"
 
-        # Dividir el mensaje si es muy largo para que Telegram no lo rechace
+        texto_final += f"📲 *WHATSAPP:* 04249611372\n{ENLACE_CANAL}"
+
         if len(texto_final) > 4000:
             for x in range(0, len(texto_final), 4000):
                 bot.send_message(message.chat.id, texto_final[x:x+4000], parse_mode="Markdown")
@@ -481,8 +511,8 @@ def cmd_resumen(message):
             bot.send_message(message.chat.id, texto_final, parse_mode="Markdown")
 
     except Exception as e:
-        print(f"Error en comando resumen: {e}")
-        bot.reply_to(message, "⚠️ Ocurrió un error al generar el resumen.")
+        print(f"Error en comando tabla: {e}")
+        bot.reply_to(message, "⚠️ Ocurrió un error al generar la tabla.")
 
 def loop_bot():
     schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
