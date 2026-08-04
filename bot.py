@@ -11,18 +11,10 @@ ENLACE_CANAL = "https://t.me/+x4A5d5Jpu44yNzc5"
 
 bot = telebot.TeleBot(TOKEN)
 
-# --- ESTRUCTURAS DE DATOS ---
-resultados_horas_en_punto = {
-    "08:00": {}, "09:00": {}, "10:00": {}, "11:00": {},
-    "12:00": {}, "13:00": {}, "14:00": {}, "15:00": {},
-    "16:00": {}, "17:00": {}, "18:00": {}, "19:00": {},
-}
-
-resultados_medias_horas = {
-    "08:30": {}, "09:30": {}, "10:30": {}, "11:30": {},
-    "12:30": {}, "13:30": {}, "14:30": {}, "15:30": {},
-    "16:30": {}, "17:30": {}, "18:30": {},
-}
+# --- 3 ESTRUCTURAS DE DATOS SEPARADAS PARA LOS 3 BLOQUES ---
+resultados_bloque_1 = {}  # Minutos 00 a 10
+resultados_bloque_2 = {}  # Minutos 10 a 20
+resultados_bloque_3 = {}  # Minutos 30 a 40
 
 LOTERIAS_COMPLETAS = [
     "Lotto Activo", "La Granjita", "Selva Plus", "Lotto Real",
@@ -31,7 +23,7 @@ LOTERIAS_COMPLETAS = [
     "Guaca Activa", "Mega Guaca",
 ]
 
-# --- 1. MENSAJES INDIVIDUALES Y DE MAÑANA ---
+# --- MENSAJES DE INICIO, CIERRE Y DÓLAR ---
 def enviar_mensaje_buenos_dias():
     msg = (
         "🍀 **¡BUENOS DÍAS, CARGADOS DE BUENA SUERTE!** 🍀\n\n"
@@ -43,6 +35,29 @@ def enviar_mensaje_buenos_dias():
         bot.send_message(CANAL, msg, parse_mode="Markdown")
     except Exception as e:
         print(f"Error al enviar buenos días: {e}")
+
+def enviar_mensaje_buenas_noches():
+    msg = (
+        "🌙 **¡FIN DE LA JORNADA!** 🌙\n\n"
+        "🍀 Gracias a todos por acompañarnos hoy en Agencia F&D.\n"
+        "✨ ¡Que descansen y nos vemos mañana con más suerte y grandes premios! 🎯"
+    )
+    try:
+        bot.send_message(CANAL, msg, parse_mode="Markdown")
+    except Exception as e:
+        print(f"Error al enviar buenas noches: {e}")
+
+def enviar_tasa_dolar():
+    # Aquí puedes actualizar o integrar tu función de tasa del dólar si la tienes automatizada
+    msg = (
+        "💵 **TASA MONITOR DOLAR** 💵\n\n"
+        "📊 Mantente atento a nuestras referencias para el pago de tus jugadas.\n"
+        "🍀 Agencia F&D"
+    )
+    try:
+        bot.send_message(CANAL, msg, parse_mode="Markdown")
+    except Exception as e:
+        print(f"Error al enviar dólar: {e}")
 
 def enviar_resultado_individual(nombre_loteria, hora_resultado, resultado):
     msg = (
@@ -57,60 +72,64 @@ def enviar_resultado_individual(nombre_loteria, hora_resultado, resultado):
     except Exception as e:
         print(f"Error al enviar resultado individual: {e}")
 
-# --- 2. GUARDAR Y CLASIFICAR EN MEMORIA ---
+# --- GUARDAR Y CLASIFICAR SEGÚN EL MINUTO EXACTO ---
 def guardar_resultado_en_memoria(nombre_loteria, hora_resultado, resultado):
-    # Primero envía la alerta individual como lo hacías antes
     enviar_resultado_individual(nombre_loteria, hora_resultado, resultado)
     
-    # Luego lo clasifica para las tablas automáticas
     try:
         dt = datetime.strptime(hora_resultado, "%H:%M")
-        if dt.minute < 15 or dt.minute >= 45:
-            slot = dt.replace(minute=0, second=0).strftime("%H:%M")
-            if slot in resultados_horas_en_punto:
-                resultados_horas_en_punto[slot][nombre_loteria] = resultado
-        else:
-            slot = dt.replace(minute=30, second=0).strftime("%H:%M")
-            if slot in resultados_medias_horas:
-                resultados_medias_horas[slot][nombre_loteria] = resultado
-    except:
-        pass
+        minuto = dt.minute
+        slot_hora = dt.strftime("%H:%M")
 
-# --- 3. CONSTRUCTOR DE TABLAS ---
-def construir_y_enviar_tabla(tipo_tabla="en_punto"):
+        if 0 <= minuto <= 10:
+            if slot_hora not in resultados_bloque_1:
+                resultados_bloque_1[slot_hora] = {}
+            resultados_bloque_1[slot_hora][nombre_loteria] = resultado
+
+        elif 10 < minuto <= 20:
+            if slot_hora not in resultados_bloque_2:
+                resultados_bloque_2[slot_hora] = {}
+            resultados_bloque_2[slot_hora][nombre_loteria] = resultado
+
+        elif 20 < minuto <= 40:
+            if slot_hora not in resultados_bloque_3:
+                resultados_bloque_3[slot_hora] = {}
+            resultados_bloque_3[slot_hora][nombre_loteria] = resultado
+    except Exception as e:
+        print(f"Error al clasificar resultado: {e}")
+
+# --- CONSTRUCTOR Y ENVÍO DE LAS 3 TABLAS ---
+def construir_y_enviar_tabla(bloque_id):
     hoy = datetime.now().strftime("%d/%m/%Y")
     
-    if tipo_tabla == "en_punto":
-        slots_dict = resultados_horas_en_punto
-        titulo_seccion = "📊 **RESULTADOS - HORAS EN PUNTO**"
+    if bloque_id == 1:
+        slots_dict = resultados_bloque_1
+        titulo_seccion = "📊 **RESULTADOS - BLOQUE (00 a 10)**"
+    elif bloque_id == 2:
+        slots_dict = resultados_bloque_2
+        titulo_seccion = "📊 **RESULTADOS - BLOQUE (10 a 20)**"
     else:
-        slots_dict = resultados_medias_horas
-        titulo_seccion = "📊 **RESULTADOS - MEDIAS HORAS**"
+        slots_dict = resultados_bloque_3
+        titulo_seccion = "📊 **RESULTADOS - BLOQUE (hasta 40)**"
 
     slots_activos = [s for s in sorted(slots_dict.keys()) if slots_dict[s]]
 
     if not slots_activos:
-        if tipo_tabla == "en_punto":
-            slots_activos = ["08:00", "09:00"]
-            slots_dict["08:00"] = {lot: "12🐎" for lot in LOTERIAS_COMPLETAS[:4]}
-            slots_dict["09:00"] = {lot: "25🐔" for lot in LOTERIAS_COMPLETAS[:4]}
-        else:
-            slots_activos = ["08:30", "09:30"]
-            slots_dict["08:30"] = {lot: "31🦫" for lot in LOTERIAS_COMPLETAS[:4]}
-            slots_dict["09:30"] = {lot: "18🫏" for lot in LOTERIAS_COMPLETAS[:4]}
+        slots_activos = ["08:00"]
+        slots_dict["08:00"] = {lot: "12🐎" for lot in LOTERIAS_COMPLETAS[:4]}
 
     msg = f"🍀 **AGENCIA F&D** 🍀\n"
     msg += f"✨ ¡La suerte comienza aquí! ✨\n"
     msg += f"{titulo_seccion}\n"
     msg += f"📅 {hoy}\n\n"
 
-    bloques = [
+    bloques_loterias = [
         LOTERIAS_COMPLETAS[0:4],
         LOTERIAS_COMPLETAS[4:8],
         LOTERIAS_COMPLETAS[8:12]
     ]
 
-    for bloque in bloques:
+    for bloque in bloques_loterias:
         msg += "------------------------------------------\n"
         header = f"{'HORA':<8}"
         for lot in bloque:
@@ -133,40 +152,50 @@ def construir_y_enviar_tabla(tipo_tabla="en_punto"):
     try:
         bot.send_message(CANAL, msg, parse_mode="Markdown")
     except Exception as e:
-        print(f"Error al enviar tabla: {e}")
+        print(f"Error al enviar tabla del bloque {bloque_id}: {e}")
 
-    for slot in slots_activos:
-        slots_dict[slot].clear()
+    slots_dict.clear()
 
 # --- COMANDOS DE PRUEBA DESDE TELEGRAM ---
-@bot.message_handler(commands=['tabla', 'probar'])
-def enviar_prueba_manual(message):
-    try:
-        construir_y_enviar_tabla("en_punto")
-        bot.reply_to(message, "¡Tabla de horas en punto enviada con éxito!")
-    except Exception as e:
-        bot.reply_to(message, f"Error: {e}")
+@bot.message_handler(commands=['tabla1'])
+def probar_tabla_1(message):
+    construir_y_enviar_tabla(1)
+    bot.reply_to(message, "Tabla del Bloque 1 enviada.")
 
-@bot.message_handler(commands=['medias'])
-def enviar_prueba_medias(message):
-    try:
-        construir_y_enviar_tabla("medias_horas")
-        bot.reply_to(message, "¡Tabla de medias horas enviada con éxito!")
-    except Exception as e:
-        bot.reply_to(message, f"Error: {e}")
+@bot.message_handler(commands=['tabla2'])
+def probar_tabla_2(message):
+    construir_y_enviar_tabla(2)
+    bot.reply_to(message, "Tabla del Bloque 2 enviada.")
+
+@bot.message_handler(commands=['tabla3'])
+def probar_tabla_3(message):
+    construir_y_enviar_tabla(3)
+    bot.reply_to(message, "Tabla del Bloque 3 enviada.")
 
 @bot.message_handler(commands=['dia'])
-def enviar_prueba_dia(message):
+def probar_dia(message):
     enviar_mensaje_buenos_dias()
-    bot.reply_to(message, "¡Mensaje de buenos días enviado!")
+    bot.reply_to(message, "Mensaje de buenos días enviado.")
+
+@bot.message_handler(commands=['noche'])
+def probar_noche(message):
+    enviar_mensaje_buenas_noches()
+    bot.reply_to(message, "Mensaje de buenas noches enviado.")
+
+@bot.message_handler(commands=['dolar'])
+def probar_dolar(message):
+    enviar_tasa_dolar()
+    bot.reply_to(message, "Tasa del dólar enviada.")
 
 # --- PROGRAMACIÓN DE ENVÍOS CON SCHEDULE ---
-# Mensaje de buenos días a las 07:30 AM
 schedule.every().day.at("07:30").do(enviar_mensaje_buenos_dias)
+schedule.every().day.at("09:00").do(enviar_tasa_dolar)
+schedule.every().day.at("20:00").do(enviar_mensaje_buenas_noches)
 
-# Tablas automáticas en sus horas correspondientes
-schedule.every().hour.at(":10").do(lambda: construir_y_enviar_tabla("en_punto"))
-schedule.every().hour.at(":40").do(lambda: construir_y_enviar_tabla("medias_horas"))
+# Tablas automáticas
+schedule.every().hour.at(":10").do(lambda: construir_y_enviar_tabla(1))
+schedule.every().hour.at(":20").do(lambda: construir_y_enviar_tabla(2))
+schedule.every().hour.at(":40").do(lambda: construir_y_enviar_tabla(3))
 
 def ejecutar_programador():
     while True:
