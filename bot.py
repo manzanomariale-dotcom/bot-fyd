@@ -37,7 +37,7 @@ app = Flask("")
 
 @app.route("/")
 def home():
-  return "Bot Agencia FyD activo y sin conflictos de polling."
+  return "Bot Agencia FyD activo y en línea."
 
 
 @app.route("/test/madrugada")
@@ -76,6 +76,15 @@ def test_cierre():
   return "Prueba de cierre ejecutada."
 
 
+@app.route("/test/forzar")
+def test_forzar():
+  """Ruta manual para forzar la revisión y envío inmediato desde el navegador"""
+  verificar_y_enviar_resultados_individuales()
+  return (
+      "Revisión de resultados forzada ejecutada. Revisa el canal y los logs."
+  )
+
+
 def limpiar_texto(texto):
   return " ".join(texto.split())
 
@@ -104,7 +113,7 @@ def enviar_saludo_madrugada():
 
 def generar_piramide():
   ahora = datetime.now()
-  fecha_str = ahora.strftime("%d/%m/%Y")
+  fecha_str = ah_str = ahora.strftime("%d/%m/%Y")
   digitos = [int(c) for c in fecha_str if c.isdigit()]
   filas = [digitos]
   while len(filas[-1]) > 1:
@@ -266,50 +275,46 @@ def verificar_y_enviar_resultados_individuales():
     }
     respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
     if respuesta.status_code != 200:
+      print(f"Error HTTP lotería: {respuesta.status_code}")
       return
 
     soup = BeautifulSoup(respuesta.text, "html.parser")
-    bloques = soup.find_all(
-        ["div", "article", "section", "li"],
-        class_=re.compile(
-            r"card|box|item|lotto|result|result-item|sorteo", re.IGNORECASE
-        ),
+    # Buscamos todos los textos posibles o elementos de la página
+    textos = [
+        t.get_text(" ", strip=True) for t in soup.find_all(["div", "span", "p"])
+    ]
+    texto_completo = " ".join(textos).upper()
+
+    print(
+        f"DEBUG: Longitud texto extraído: {len(texto_completo)}"
+    )  # Para verlo en los logs de Render
+
+    # Buscamos patrones del tipo: Lotería ... Hora ... Número - Animalito
+    # O buscamos bloques que contengan horas y animalitos de forma flexible
+    # Intento de extracción general de horas y animalitos cercanos
+    coincidencias = re.findall(
+        r"(\d{1,2}:\d{2}\s*(?:AM|PM))\D{1,30}(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+)",
+        texto_completo,
     )
-    if not bloques:
-      bloques = [soup]
 
     hubo_cambios = False
-
-    for tarjeta in bloques:
-      texto_bloque = tarjeta.get_text(" | ", strip=True).upper()
-
-      patrones = re.finditer(
-          r"([A-ZÁÉÍÓÚÑ\s]{3,25})\s*\|\s*(\d{1,2}:\d{2}\s*(?:AM|PM))\s*\|\s*(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+)",
-          texto_bloque,
+    for hora_match, res_match in coincidencias:
+      hora = hora_match.upper()
+      resultado = limpiar_texto(res_match).upper()
+      nombre_loteria = (
+          "WINBIG"  # Nombre genérico de respaldo si no se aísla la lotería
       )
 
-      for match in patrones:
-        nombre_loteria = limpiar_texto(match.group(1))
-        hora = match.group(2).upper()
-        resultado = limpiar_texto(match.group(3)).upper()
+      id_resultado = f"{hora}_{resultado}"
 
-        if (
-            "WINBIG" in nombre_loteria
-            or "RESULTADOS" in nombre_loteria
-            or len(nombre_loteria) < 3
-        ):
-          continue
-
-        id_resultado = f"{nombre_loteria}_{hora}"
-
-        if id_resultado not in enviados_hoy:
-          mensaje = HEADER_FyD.format(
-              nombre_loteria=nombre_loteria, hora=hora, resultado=resultado
-          )
-          enviar_telegram(mensaje)
-          enviados_hoy.add(id_resultado)
-          hubo_cambios = True
-          time.sleep(2)
+      if id_resultado not in enviados_hoy:
+        mensaje = HEADER_FyD.format(
+            nombre_loteria=nombre_loteria, hora=hora, resultado=resultado
+        )
+        enviar_telegram(mensaje)
+        enviados_hoy.add(id_resultado)
+        hubo_cambios = True
+        time.sleep(2)
 
     if hubo_cambios:
       guardar_registros(enviados_hoy)
