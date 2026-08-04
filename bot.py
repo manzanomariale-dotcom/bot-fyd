@@ -37,49 +37,49 @@ app = Flask("")
 
 @app.route("/")
 def home():
-  return "Bot Agencia FyD activo y escaneando."
+  return "Bot Agencia FyD activo y con control estricto."
 
 
 @app.route("/test/madrugada")
 def test_madrugada():
   enviar_saludo_madrugada()
-  return "Prueba de madrugada ejecutada."
+  return "Prueba ejecutada."
 
 
 @app.route("/test/piramide")
 def test_piramide():
   enviar_piramide_diaria()
-  return "Prueba de pirámide ejecutada."
+  return "Prueba ejecutada."
 
 
 @app.route("/test/regalo")
 def test_regalo():
   enviar_datos_regalo()
-  return "Prueba de regalo automático ejecutada."
+  return "Prueba ejecutada."
 
 
 @app.route("/test/saludo")
 def test_saludo():
   enviar_saludo_matutino()
-  return "Prueba de saludo ejecutada."
+  return "Prueba ejecutada."
 
 
 @app.route("/test/bcv")
 def test_bcv():
   enviar_tasa_dolar()
-  return "Prueba de BCV ejecutada."
+  return "Prueba ejecutada."
 
 
 @app.route("/test/cierre")
 def test_cierre():
   enviar_mensaje_cierre()
-  return "Prueba de cierre ejecutada."
+  return "Prueba ejecutada."
 
 
 @app.route("/test/forzar")
 def test_forzar():
   verificar_y_enviar_resultados_individuales()
-  return "Revisión forzada ejecutada. Revisa los logs."
+  return "Verificación ejecutada."
 
 
 def limpiar_texto(texto):
@@ -96,7 +96,7 @@ def enviar_telegram(mensaje, disable_web_preview=True):
   }
   try:
     response = requests.post(url, json=payload, timeout=10)
-    print(f"Telegram respuesta: {response.status_code} - {response.text}")
+    print(f"Telegram respuesta: {response.status_code}")
   except Exception as e:
     print(f"⚠️ Excepción en Telegram: {e}")
 
@@ -271,20 +271,22 @@ def verificar_y_enviar_resultados_individuales():
         )
     }
     respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
-    print(f"Estado HTTP Lotería: {respuesta.status_code}")
     if respuesta.status_code != 200:
       return
 
     soup = BeautifulSoup(respuesta.text, "html.parser")
+    # Buscamos elementos específicos que contengan bloques de resultados en WinBig
     tarjetas = soup.find_all(
-        ["div", "article", "section", "li", "tr", "td"]
-    )  # Busca cualquier contenedor
-    print(f"Bloques encontrados en la web: {len(tarjetas)}")
+        ["div", "article", "section"],
+        class_=re.compile(r"card|box|item|result", re.IGNORECASE),
+    )
+    if not tarjetas:
+      tarjetas = soup.find_all(["div", "section", "li"])
 
     hubo_cambios = False
 
     for tarjeta in tarjetas:
-      texto_tarjeta = tarjeta.get_text(" | ", strip=True).upper()
+      texto_tarjeta = tarjeta.get_text(" ", strip=True).upper()
 
       match_h = re.search(r"(\d{1,2}:\d{2}\s*(?:AM|PM))", texto_tarjeta)
       match_res = re.search(r"(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+)", texto_tarjeta)
@@ -298,25 +300,24 @@ def verificar_y_enviar_resultados_individuales():
       if "PENDIENTE" in resultado or len(resultado) < 3:
         continue
 
-      # Extraemos cualquier texto inicial que sirva como nombre de lotería
-      partes = texto_tarjeta.split("|")
-      nombre_loteria = "LOTERIA"
-      for p in partes:
-        p_limpio = limpiar_texto(p)
-        if (
-            3 <= len(p_limpio) <= 25
-            and not re.search(r"\d{1,2}:\d{2}", p_limpio)
-            and "WINBIG" not in p_limpio
-            and "RESULTADOS" not in p_limpio
-            and "PENDIENTE" not in p_limpio
-        ):
-          nombre_loteria = p_limpio
-          break
-
-      id_resultado = f"{nombre_loteria}_{hora}_{resultado}"
+      # Identificador estricto basado únicamente en Hora + Animalito para evitar duplicados por nombres mal leídos
+      id_resultado = f"{hora}_{resultado}"
 
       if id_resultado not in enviados_hoy:
-        print(f"¡Nuevo resultado detectado!: {nombre_loteria} - {hora} - {resultado}")
+        # Asignamos un nombre genérico limpio o extraemos la primera palabra clave válida
+        nombre_loteria = "SORTEO ANIMALITOS"
+        for palabra in [
+            "LOTTO ACTIVO",
+            "LA GRANJITA",
+            "GUACHARO",
+            "ACTIVE",
+            "PATRONUS",
+            "MONJE",
+        ]:
+          if palabra in texto_tarjeta:
+            nombre_loteria = palabra
+            break
+
         mensaje = HEADER_FyD.format(
             nombre_loteria=nombre_loteria, hora=hora, resultado=resultado
         )
@@ -329,7 +330,7 @@ def verificar_y_enviar_resultados_individuales():
       guardar_registros(enviados_hoy)
 
   except Exception as e:
-    print(f"Error al verificar resultados individuales: {e}")
+    print(f"Error al verificar: {e}")
 
 
 def loop_bot():
