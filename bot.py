@@ -40,6 +40,18 @@ URL_BCV = 'https://www.bcv.org.ve/'
 # Archivo local para control de registros persistentes y evitar duplicados
 ARCH_REGISTRO = "resultados_enviados.json"
 
+# Pool completo de animalitos para los análisis automáticos
+ANIMALES_POOL = [
+    "00 - Delfín", "01 - Carnero", "02 - Toro", "03 - Ciempiés", "04 - Alacrán", 
+    "05 - León", "06 - Rana", "07 - Perico", "08 - Ratón", "09 - Águila", 
+    "10 - Tigre", "11 - Gato", "12 - Caballo", "13 - Mono", "14 - Paloma", 
+    "15 - Zorro", "16 - Oso", "17 - Pavo", "18 - Burro", "19 - Chivo", 
+    "20 - Cochino", "21 - Gallo", "22 - Camello", "23 - Cebra", "24 - Iguana", 
+    "25 - Gallina", "26 - Vaca", "27 - Perro", "28 - Zamuro", "29 - Elefante", 
+    "30 - Caimán", "31 - Lapa", "32 - Ardilla", "33 - Pescado", "34 - Venado", 
+    "35 - Jirafa", "36 - Culebra"
+]
+
 # Diccionario de abreviaturas oficiales solicitadas
 TRADUCCION_LOTERIAS = {
     "L.A": "LOTTO ACTIVO",
@@ -224,19 +236,7 @@ def enviar_regalos_diarios():
     fecha_str = ahora.strftime("%d/%m/%Y")
     seed_val = int(ahora.strftime("%Y%m%d")) + 99
     rnd = random.Random(seed_val)
-    
-    animales_pool = [
-        "0 - Delfín", "1 - Carnero", "2 - Toro", "3 - Ciempiés", "4 - Alacrán", 
-        "5 - León", "6 - Rana", "7 - Perico", "8 - Ratón", "9 - Águila", 
-        "10 - Tigre", "11 - Gato", "12 - Caballo", "13 - Mono", "14 - Paloma", 
-        "15 - Zorro", "16 - Oso", "17 - Pavo", "18 - Burro", "19 - Chivo", 
-        "20 - Cochino", "21 - Gallo", "22 - Camelello", "23 - Cebra", "24 - Iguana", 
-        "25 - Gallina", "26 - Vaca", "27 - Perro", "28 - Zamuro", "29 - Elefante", 
-        "30 - Caimán", "31 - Lapa", "32 - Ardilla", "33 - Pescado", "34 - Venado", 
-        "35 - Jirafa", "36 - Culebra"
-    ]
-    
-    regalos_seleccionados = rnd.sample(animales_pool, 3)
+    regalos_seleccionados = rnd.sample(ANIMALES_POOL, 3)
     
     mensaje_regalos = (
         "🎁 *LOS REGALOS DE LA AGENCIA FyD* 🎁\n"
@@ -252,39 +252,76 @@ def enviar_regalos_diarios():
     )
     enviar_telegram(mensaje_regalos, disable_web_preview=True)
 
-# --- ANÁLISIS Y REGALITOS BASADOS EN EL AVANCE DE LOS SORTEOS ---
+# --- FUNCIÓN INTELIGENTE: EXTRAE LOS RESULTADOS YA SALIDOS PARA EVITARLOS Y ANALIZAR ---
+def obtener_animales_salidos_actuales():
+    salidos = set()
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=10)
+        if respuesta.status_code == 200:
+            soup = BeautifulSoup(respuesta.text, 'html.parser')
+            texto_total = soup.get_text(" ", strip=True)
+            # Buscar patrones de resultados tipo "34 - VENADO" o números solos que hayan salido
+            matches = re.findall(r'(\d{1,2})\s*-\s*([A-ZÁÉÍÓÚÑa-zñáéíóú]+)', texto_total)
+            for m in matches:
+                num_str = f"{int(m[0]):02d}" if m[0].isdigit() else m[0]
+                salidos.add(num_str)
+    except Exception as e:
+        print(f"Error obteniendo salidos para análisis: {e}")
+    return salidos
+
+def seleccionar_analisis_dinamico(cantidad):
+    salidos = obtener_animales_salidos_actuales()
+    # Filtrar el pool general excluyendo los que ya salieron hoy
+    disponibles = [a for a in ANIMALES_POOL if a.split(" - ")[0].zfill(2) not in salidos]
+    
+    # Si por alguna razón la web no responde o ya salieron todos, usar el pool completo
+    if len(disponibles) < cantidad:
+        disponibles = ANIMALES_POOL
+
+    seed_val = int(datetime.now().strftime("%Y%m%d%H%M"))
+    rnd = random.Random(seed_val)
+    return rnd.sample(disponibles, cantidad)
+
+# --- ANÁLISIS DINÁMICOS BASADOS EN RESULTADOS REALES ---
 def enviar_estudio_8am():
+    analisis = seleccionar_analisis_dinamico(2)
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
         "_Trabajamos para tí_\n\n"
         "🔍 *ANÁLISIS TRAS EL SORTEO DE LAS 8:00 AM* 🔍\n\n"
-        "¡Ya salieron los primeros animalitos! Evaluando la apertura de la pizarra, la casa trae las recomendaciones probables a salir para los siguientes sorteos:\n\n"
-        "🔥 *Regalitos recomendados:* `13` (🐵 Mono) y `24` (🦎 Iguana)\n\n"
+        "¡Ya salieron los primeros animalitos! Evaluando la apertura de la pizarra y descartando lo ya jugado, la casa trae las recomendaciones probables para los siguientes sorteos:\n\n"
+        f"🔥 *Regalitos recomendados:* `{analisis[0]}` y `{analisis[1]}`\n\n"
         "📲 *WHATSAPP:* 04249611372\n"
         f"{ENLACE_CANAL}"
     )
     enviar_telegram(mensaje, disable_web_preview=True)
 
 def enviar_estudio_mediodia():
+    analisis = seleccionar_analisis_dinamico(2)
+    tripleta = seleccionar_analisis_dinamico(3)
+    t_str = f"{tripleta[0].split(' - ')[0]} - {tripleta[1].split(' - ')[0]} - {tripleta[2].split(' - ')[0]}"
+    
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
         "_Trabajamos para tí_\n\n"
         "☀️ *ANÁLISIS DEL MEDIODÍA* ☀️\n\n"
-        "¡Mitad de jornada! Estudiando los resultados matutinos, el tablero apunta hacia las siguientes proyecciones:\n\n"
-        "🔥 *Animales calientes:* `31` (🐾 Perro) y `00` (🐬 Delfín)\n"
-        "🎯 *Tripleta recomendada:* `13 - 24 - 00`\n\n"
+        "¡Mitad de jornada! Estudiando los resultados que nos dejó la mañana y analizando tendencias en vivo, el tablero apunta hacia las siguientes proyecciones:\n\n"
+        f"🔥 *Animales calientes:* `{analisis[0]}` y `{analisis[1]}`\n"
+        f"🎯 *Tripleta recomendada:* `{t_str}`\n\n"
         "📲 *WHATSAPP:* 04249611372\n"
         f"{ENLACE_CANAL}"
     )
     enviar_telegram(mensaje, disable_web_preview=True)
 
 def enviar_estudio_tarde():
+    analisis = seleccionar_analisis_dinamico(2)
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
         "_Trabajamos para tí_\n\n"
         "🌇 *ANÁLISIS Y CIERRE DE LA TARDE* 🌇\n\n"
-        "¡A pocas horas de terminar la jornada! Evaluando el comportamiento de los últimos sorteos, la casa trae los animales con mayor probabilidad de reventar en la pizarra para asegurar el cierre:\n\n"
-        "⚡️ *Imparables de la Tarde / Cierre:* `15` (🦊 Zorro) y `36` (🐍 Culebra)\n\n"
+        "¡A pocas horas de terminar la jornada! Evaluando el comportamiento de los últimos sorteos y filtrando los ganadores del día, la casa trae los animales con mayor probabilidad de reventar para asegurar el cierre:\n\n"
+        f"⚡️ *Imparables de la Tarde / Cierre:* `{analisis[0]}` y `{analisis[1]}`\n\n"
         "📲 *WHATSAPP:* 04249611372\n"
         f"{ENLACE_CANAL}"
     )
@@ -581,7 +618,7 @@ def loop_bot():
     schedule.every().day.at("06:45").do(enviar_regalos_diarios)
     schedule.every().day.at("07:00").do(enviar_saludo_matutino)
     
-    # Análisis y regalitos automáticos tras los sorteos clave
+    # Análisis y regalitos automáticos leídos en vivo de los resultados del día
     schedule.every().day.at("08:15").do(enviar_estudio_8am)       # Tras ver los resultados de las 8 AM
     schedule.every().day.at("12:15").do(enviar_estudio_mediodia)  # Mitad de jornada (con tripleta)
     schedule.every().day.at("16:15").do(enviar_estudio_tarde)     # Cierre de tarde (sin tripleta)
