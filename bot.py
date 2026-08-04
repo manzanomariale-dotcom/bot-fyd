@@ -35,26 +35,6 @@ HEADER_FyD = (
     f"{ENLACE_CANAL}"
 )
 
-# --- LISTAS DE LOTERÍAS DIFERENTES PARA CADA BLOQUE DE TABLAS ---
-LOTERIAS_BLOQUE_1 = [
-    "Lotto Activo",
-    "La Granjita",
-    "Selva Plus",
-    "Lotto Real",
-]
-LOTERIAS_BLOQUE_2 = [
-    "Guácharo Activo",
-    "Loto Chaima",
-    "Monje Millonario",
-    "Lotto RD",
-]
-LOTERIAS_BLOQUE_3 = [
-    "Lotto Inter",
-    "Guacharito Millonario",
-    "Guaca Activa",
-    "Mega Guaca",
-]
-
 app = Flask("")
 
 
@@ -97,25 +77,6 @@ def test_bcv():
 def test_cierre():
   enviar_mensaje_cierre()
   return "Prueba de cierre ejecutada."
-
-
-# Rutas de prueba para forzar el envío de las tablas por bloques
-@app.route("/test/tabla1")
-def test_tabla_1():
-  construir_y_enviar_tabla(1)
-  return "Tabla del Bloque 1 enviada."
-
-
-@app.route("/test/tabla2")
-def test_tabla_2():
-  construir_y_enviar_tabla(2)
-  return "Tabla del Bloque 2 enviada."
-
-
-@app.route("/test/tabla3")
-def test_tabla_3():
-  construir_y_enviar_tabla(3)
-  return "Tabla del Bloque 3 enviada."
 
 
 def limpiar_texto(texto):
@@ -388,63 +349,6 @@ def verificar_y_enviar_resultados_individuales():
     print(f"Error al verificar resultados individuales: {e}")
 
 
-def construir_y_enviar_tabla(bloque_id):
-  hoy = datetime.now().strftime("%d-%m-%Y")
-  hoy_legible = datetime.now().strftime("%d/%m/%Y")
-
-  if bloque_id == 1:
-    titulo_seccion = "📊 **RESULTADOS - BLOQUE (00 a 10)**"
-    loterias_a_usar = LOTERIAS_BLOQUE_1
-  elif bloque_id == 2:
-    titulo_seccion = "📊 **RESULTADOS - BLOQUE (10 a 20)**"
-    loterias_a_usar = LOTERIAS_BLOQUE_2
-  else:
-    titulo_seccion = "📊 **RESULTADOS - BLOQUE (hasta 40)**"
-    loterias_a_usar = LOTERIAS_BLOQUE_3
-
-  enviados_hoy = cargar_registros()
-
-  slots_dict = {}
-  for item in enviados_hoy:
-    partes = item.rsplit("_", 1)
-    if len(partes) == 2:
-      lot, hora = partes[0], partes[1]
-      if lot in loterias_a_usar:
-        if hora not in slots_dict:
-          slots_dict[hora] = {}
-        slots_dict[hora][lot] = "✅"
-
-  if not slots_dict:
-    slots_dict["09:00"] = {lot: "----" for lot in loterias_a_usar}
-
-  slots_activos = sorted(slots_dict.keys())
-
-  msg = f"🍀 **AGENCIA F&D** 🍀\n"
-  msg += f"✨ ¡La suerte comienza aquí! ✨\n"
-  msg += f"{titulo_seccion}\n"
-  msg += f"📅 {hoy_legible}\n\n"
-
-  msg += "------------------------------------------\n"
-  header = f"{'HORA':<8}"
-  for lot in loterias_a_usar:
-    nombre_corto = (lot[:8] + "..") if len(lot) > 8 else lot[:8]
-    header += f"{nombre_corto:<9}"
-  msg += f"`{header}`\n"
-
-  for slot in slots_activos:
-    row = f"{slot:<8}"
-    for lot in loterias_a_usar:
-      res = slots_dict[slot].get(lot, "----")
-      row += f"{res:<9}"
-    msg += f"`{row}`\n"
-
-  msg += "\n🍀 Gracias por preferir Agencia F&D\n"
-  msg += "🎯 ¡Mucha suerte en cada jugada!\n"
-  msg += f"\nWHATSAPP: 0424-9611372\n{ENLACE_CANAL}"
-
-  enviar_telegram(msg)
-
-
 def loop_bot():
   schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
   schedule.every().day.at("06:31").do(enviar_piramide_diaria)
@@ -452,10 +356,6 @@ def loop_bot():
   schedule.every().day.at("07:00").do(enviar_saludo_matutino)
   schedule.every().day.at("16:30").do(enviar_tasa_dolar)
   schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
-
-  schedule.every().hour.at(":10").do(lambda: construir_y_enviar_tabla(1))
-  schedule.every().hour.at(":20").do(lambda: construir_y_enviar_tabla(2))
-  schedule.every().hour.at(":40").do(lambda: construir_y_enviar_tabla(3))
 
   schedule.every(1).minute.do(verificar_y_enviar_resultados_individuales)
 
