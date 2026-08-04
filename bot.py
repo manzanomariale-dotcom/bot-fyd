@@ -67,6 +67,7 @@ def home():
         "👉 <a href='/test/saludo'>Probar Saludo Matutino</a><br>"
         "👉 <a href='/test/bcv'>Probar Tasa Oficial BCV</a><br>"
         "👉 <a href='/test/cierre'>Probar Mensaje de Cierre (8:00 PM)</a>"
+        "👉 <a href='/test/resultados'>Probar Resultados Manualmente</a>"
     )
 
 # --- RUTAS DE PRUEBA MANUAL (TESTS) ---
@@ -99,6 +100,11 @@ def test_bcv():
 def test_cierre():
     enviar_mensaje_cierre()
     return "Prueba de Cierre de Jornada ejecutada."
+
+@app.route('/test/resultados')
+def test_resultados():
+    verificar_y_enviar_resultados_individuales()
+    return "Prueba de verificación de resultados ejecutada."
 
 def limpiar_texto(texto):
     return " ".join(texto.split())
