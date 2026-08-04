@@ -48,8 +48,20 @@ TRADUCCION_LOTERIAS = {
     "L.RE": "LOTTO REAL",
     "GHO": "GUACHARO",
     "L.CH": "LOTTO CHAIMA",
-    "MJ.M": "MONJE MILLONARIO"
+    "MJ.M": "MONJE MILLONARIO",
+    "G.O": "GUACHARO" # Por si la web usa G.O o similar
 }
+
+# Mapeo inverso exacto para construir tu tabla por columnas
+MAPA_COLUMNAS_PARTE_1 = ["L.A", "G.O", "S.P", "L.RE"]
+MAPA_COLUMNAS_PARTE_2 = ["GHO", "L.CH", "MJ.M"]
+
+# Horas estándar de la tabla
+HORAS_TABLA = [
+    "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
+    "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM", 
+    "06:00 PM", "07:00 PM"
+]
 
 HEADER_FyD = (
     "Resultado: *AGENCIA FyD*\n"
@@ -341,7 +353,6 @@ def verificar_y_enviar_resultados_individuales():
 
             nombre_loteria = limpiar_texto(nombre_loteria)
             
-            # Aplicar traducción si coincide con las siglas
             for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
                 if sigla in nombre_loteria.upper() or nombre_loteria.upper() == sigla:
                     nombre_loteria = nombre_largo
@@ -369,7 +380,6 @@ def verificar_y_enviar_resultados_individuales():
                     continue
 
                 resultado = limpiar_texto(match_res.group(1)).upper()
-                
                 id_resultado = f"{nombre_loteria}_{hora}_{resultado}"
 
                 if es_primera_ejecucion:
@@ -410,12 +420,12 @@ def verificar_minuto():
             ultimo_aviso_minuto = clave_tiempo
 
 # ==========================================
-# COMANDOS /resumen Y /tabla BLINDADOS CONTRA ERRORES
+# COMANDOS /resumen Y /tabla CON TU FORMATO EXACTO
 # ==========================================
 @bot.message_handler(commands=['resumen', 'tabla'])
 def cmd_resumen(message):
     try:
-        bot.reply_to(message, "🔍 Consultando tabla de resultados actual, por favor espera...")
+        bot.reply_to(message, "🔍 Generando tabla estructurada de resultados, por favor espera...")
         
         headers = {'User-Agent': 'Mozilla/5.0'}
         respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
@@ -426,7 +436,8 @@ def cmd_resumen(message):
         soup = BeautifulSoup(respuesta.text, 'html.parser')
         tarjetas = soup.find_all(['div', 'article', 'section'], class_=re.compile(r'card|box|item|lotto|result', re.IGNORECASE))
 
-        resumen_por_loterias = {}
+        # Estructura para almacenar: { "LOTTO ACTIVO": { "08:00 AM": "34", ... }, ... }
+        datos_tabla = {}
 
         for tarjeta in tarjetas:
             try:
@@ -452,7 +463,6 @@ def cmd_resumen(message):
 
                 nombre_loteria = limpiar_texto(nombre_loteria)
                 
-                # Aplicar traducción a nombre oficial
                 for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
                     if sigla in nombre_loteria.upper() or nombre_loteria.upper() == sigla:
                         nombre_loteria = nombre_largo
@@ -461,8 +471,8 @@ def cmd_resumen(message):
                 if "RULETA ROYAL" in nombre_loteria.upper() or "RESULTADOS" in nombre_loteria.upper():
                     continue
 
-                if nombre_loteria not in resumen_por_loterias:
-                    resumen_por_loterias[nombre_loteria] = []
+                if nombre_loteria not in datos_tabla:
+                    datos_tabla[nombre_loteria] = {}
 
                 slots_sorteo = tarjeta.find_all(['div', 'li', 'span', 'tr'], class_=re.compile(r'item|slot|draw|row|col', re.IGNORECASE))
                 if not slots_sorteo:
@@ -471,52 +481,80 @@ def cmd_resumen(message):
                 for slot in slots_sorteo:
                     try:
                         texto_slot = slot.get_text(" ", strip=True).upper()
-                        
                         match_h = re.search(r'\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b', texto_slot)
                         if not match_h:
                             continue
                         hora = match_h.group(1).upper()
 
                         if "PENDIENTE" in texto_slot:
-                            resumen_por_loterias[nombre_loteria].append(f"• {hora}: ⏳ Pendiente")
+                            datos_tabla[nombre_loteria][hora] = ""
                         else:
-                            match_res = re.search(r'(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)', texto_slot)
+                            match_res = re.search(r'(\d{1,2})\s*-\s*[A-ZÁÉÍÓÚÑa-zñáéíóú]+', texto_slot)
                             if match_res:
-                                resultado = limpiar_texto(match_res.group(1)).upper()
-                                resumen_por_loterias[nombre_loteria].append(f"• {hora}: {resultado}")
+                                num_animalito = match_res.group(1).zfill(2) # Formato de 2 dígitos (ej: 34 en vez de 34)
+                                datos_tabla[nombre_loteria][hora] = num_animalito
                     except Exception:
                         continue
             except Exception:
                 continue
 
-        if not resumen_por_loterias:
-            bot.reply_to(message, "⚠️ No se encontraron resultados disponibles para armar la tabla en este momento.")
-            return
+        # Mapeo de nombres largos a las abreviaturas exactas de tu plantilla
+        mapa_nombres_a_sigla = {
+            "LOTTO ACTIVO": "L.A",
+            "GUACHARO": "G.O",
+            "SELVA PLUS": "S.P",
+            "LOTTO REAL": "L.RE",
+            "LOTTO CHAIMA": "L.CH",
+            "MONJE MILLONARIO": "MJ.M"
+        }
 
-        # Construcción del mensaje con el Encabezado Oficial de la Agencia FyD (Texto Plano sin Markdown)
-        fecha_hoy = datetime.now().strftime("%d/%m/%Y")
-        texto_final = (
-            "🎯 AGENCIA FyD 🎯\n"
-            "_Trabajamos para tí_\n\n"
-            "📊 TABLA RESUMEN DE RESULTADOS 📊\n"
-            f"📅 Fecha: {fecha_hoy}\n\n"
-        )
+        # Función auxiliar para extraer el número formateado o vacío
+        def obtener_val(sigla_buscada, hora_str):
+            nombre_largo = TRADUCCION_LOTERIAS.get(sigla_buscada, "")
+            val = datos_tabla.get(nombre_largo, {}).get(hora_str, "")
+            return val if val else ""
 
-        for loteria, items in resumen_por_loterias.items():
-            if items:
-                texto_final += f"🎲 {loteria}:\n"
-                for item in items:
-                    texto_final += f"  {item}\n"
-                texto_final += "\n"
+        # Construcción exacta del formato solicitado
+        texto_final = "RESULTADOS ANIMALITOS\n\n"
 
-        texto_final += f"📲 WHATSAPP: 04249611372\n{ENLACE_CANAL}"
+        # --- BLOQUE 1 (L.A | G.O | S.P | L.RE) ---
+        cabecera_p1 = "L.A\tG.O\tS.P\tL.RE"
+        texto_final += f"{cabecera_p1}\n"
 
-        # Envío seguro como texto plano para evitar errores de entidades
+        for h in HORAS_TABLA:
+            # Extraer hora corta (ej: "08:00 AM" -> "08:⁰⁰")
+            h_corta = h.replace(":00 ", ":⁰⁰:").replace(" AM", "").replace(" PM", "")
+            
+            v_la = obtener_val("L.A", h)
+            v_go = obtener_val("G.O", h)
+            v_sp = obtener_val("S.P", h)
+            v_lre = obtener_val("L.RE", h)
+            
+            texto_final += f"{h_corta} {v_la}|{v_go}|{v_sp}|{v_lre}\n"
+
+        texto_final += "\n"
+
+        # --- BLOQUE 2 (GHO | L.CH | MJ.M) ---
+        cabecera_p2 = "GHO\tL.CH\tMJ.M"
+        texto_final += f"   {cabecera_p2}\n"
+
+        for h in HORAS_TABLA:
+            h_corta = h.split(":")[0] + ":" # formato compacto de hora
+            
+            v_gho = obtener_val("GHO", h)
+            v_lch = obtener_val("L.CH", h)
+            v_mjm = obtener_val("MJ.M", h)
+            
+            texto_final += f"{h_corta} {v_gho}|{v_lch}|{v_mjm}\n"
+
+        texto_final += "\nSEGURIDAD Y CONFIANZA"
+
+        # Envío seguro como texto plano sin formato Markdown para que los pipes y espacios salgan perfectos
         if len(texto_final) > 4000:
             for x in range(0, len(texto_final), 4000):
-                bot.send_message(message.chat.id, texto_final[x:x+4000])
+                bot.send_message(message.chat.id, f"<pre>{texto_final[x:x+4000]}</pre>", parse_mode="HTML")
         else:
-            bot.send_message(message.chat.id, texto_final)
+            bot.send_message(message.chat.id, f"<pre>{texto_final}</pre>", parse_mode="HTML")
 
     except Exception as e:
         print(f"Error general en comando tabla: {e}")
