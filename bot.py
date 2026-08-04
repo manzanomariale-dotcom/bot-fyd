@@ -40,7 +40,7 @@ app = Flask("")
 
 @app.route("/")
 def home():
-  return "Bot Agencia FyD activo y con filtro estricto."
+  return "Bot Agencia FyD activo y adaptado."
 
 
 @app.route("/test/madrugada")
@@ -77,30 +77,6 @@ def test_bcv():
 def test_cierre():
   enviar_mensaje_cierre()
   return "Prueba de cierre ejecutada."
-
-
-@app.route("/test/escanear")
-def test_escanear():
-  """Ruta de diagnóstico para ver qué lee el bot en la web de lotería"""
-  try:
-    headers = {"User-Agent": "Mozilla/5.0"}
-    respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
-    if respuesta.status_code != 200:
-      return f"Error al conectar con la lotería: {respuesta.status_code}"
-
-    soup = BeautifulSoup(respuesta.text, "html.parser")
-    bloques = soup.find_all(
-        ["div", "article", "section"],
-        class_=re.compile(r"card|box|item|lotto|result", re.IGNORECASE),
-    )
-
-    debug_info = f"Total bloques encontrados: {len(bloques)}<br><hr>"
-    for i, tarjeta in enumerate(bloques[:5]):  # Muestra los primeros 5 bloques
-      debug_info += f"<b>Bloque {i+1}:</b><br>{tarjeta.get_text(' ', strip=True)}<br><br>"
-
-    return debug_info
-  except Exception as e:
-    return f"Excepción en diagnóstico: {str(e)}"
 
 
 def limpiar_texto(texto):
@@ -285,86 +261,64 @@ def verificar_y_enviar_resultados_individuales():
   enviados_hoy = cargar_registros()
 
   try:
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,"
+            " like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+    }
     respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
     if respuesta.status_code != 200:
       return
 
     soup = BeautifulSoup(respuesta.text, "html.parser")
+    # Buscamos de forma más amplia cualquier contenedor de texto o tarjeta en la página
     bloques = soup.find_all(
-        ["div", "article", "section"],
-        class_=re.compile(r"card|box|item|lotto|result", re.IGNORECASE),
+        ["div", "article", "section", "li", "span"],
+        class_=re.compile(
+            r"card|box|item|lotto|result|result-item|sorteo", re.IGNORECASE
+        ),
     )
+    if not bloques:
+      bloques = soup.find_all(
+          True
+      )  # Fallback general si cambia la estructura
 
     hubo_cambios = False
 
     for tarjeta in bloques:
-      if tarjeta.find(
-          ["div", "article", "section"],
-          class_=re.compile(r"card|box|item|lotto|result", re.IGNORECASE),
-      ) and len(tarjeta.find_all(string=re.compile(r"\d{1,2}:\d{2}"))) > 2:
-        continue
+      texto_tarjeta = tarjeta.get_text(" ", strip=True).upper()
 
-      nombre_loteria = ""
-      posibles_titulos = tarjeta.find_all(
-          ["h1", "h2", "h3", "h4", "h5", "span", "div", "strong", "b"],
-          class_=re.compile(r"title|header|name|lotto|text", re.IGNORECASE),
+      # Buscamos si el bloque contiene una hora válida y un resultado de animalito
+      match_h = re.search(r"(\d{1,2}:\d{2}\s*(?:AM|PM))", texto_tarjeta)
+      if not match_h:
+        continue
+      hora = match_h.group(1).upper()
+
+      match_res = re.search(
+          r"(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)",
+          texto_tarjeta,
       )
-      for pt in posibles_titulos:
-        t_text = pt.get_text(" ", strip=True).upper()
-        if (
-            t_text
-            and len(t_text) > 2
-            and not re.search(r"\d{1,2}:\d{2}", t_text)
-            and "PENDIENTE" not in t_text
-        ):
-          if t_text not in ["WINBIG", "RESULTADOS"]:
-            nombre_loteria = t_text
-            break
-
-      if not nombre_loteria or len(nombre_loteria) > 40:
+      if not match_res:
         continue
 
-      nombre_loteria = limpiar_texto(nombre_loteria)
-      if "RULETA ROYAL" in nombre_loteria.upper():
-        continue
+      resultado = limpiar_texto(match_res.group(1)).upper()
 
-      slots_sorteo = tarjeta.find_all(
-          ["div", "li", "span", "tr"],
-          class_=re.compile(r"item|slot|draw|row|col", re.IGNORECASE),
-      )
-      if not slots_sorteo:
-        slots_sorteo = [tarjeta]
+      # Intentamos deducir el nombre de la lotería del bloque o texto cercano
+      nombre_loteria = "WINBIG"
+      if "RULETA" in texto_tarjeta:
+        continue  # Omitir ruleta royal si no se requiere
 
-      for slot in slots_sorteo:
-        texto_slot = slot.get_text(" ", strip=True).upper()
-        if "PENDIENTE" in texto_slot:
-          continue
+      id_resultado = f"{hora}_{resultado}"
 
-        match_h = re.search(r"(\d{1,2}:\d{2}\s*(?:AM|PM))", texto_slot)
-        if not match_h:
-          continue
-        hora = match_h.group(1).upper()
-
-        match_res = re.search(
-            r"(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)",
-            texto_slot,
+      if id_resultado not in enviados_hoy:
+        mensaje = HEADER_FyD.format(
+            nombre_loteria=nombre_loteria, hora=hora, resultado=resultado
         )
-        if not match_res:
-          continue
-
-        resultado = limpiar_texto(match_res.group(1)).upper()
-
-        id_resultado = f"{nombre_loteria}_{hora}"
-
-        if id_resultado not in enviados_hoy:
-          mensaje = HEADER_FyD.format(
-              nombre_loteria=nombre_loteria, hora=hora, resultado=resultado
-          )
-          enviar_telegram(mensaje)
-          enviados_hoy.add(id_resultado)
-          hubo_cambios = True
-          time.sleep(2)
+        enviar_telegram(mensaje)
+        enviados_hoy.add(id_resultado)
+        hubo_cambios = True
+        time.sleep(2)
 
     if hubo_cambios:
       guardar_registros(enviados_hoy)
