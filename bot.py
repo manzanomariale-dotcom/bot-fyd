@@ -52,13 +52,13 @@ TRADUCCION_LOTERIAS = {
 }
 
 HEADER_FyD = (
-    "*AGENCIA FyD*\n"
+    "Resultado: *AGENCIA FyD*\n"
+    "Hora: {hora_str}\n"
     "JUEGA AQUI\n"
-    "*RESULTADOS*\n\n"
+    "RESULTADOS ANIMALITOS\n\n"
     "🎲 *{nombre_loteria}* 🎲\n"
     "Hora: {hora}\n"
     "Animalito: *{resultado}*\n\n"
-    "JUEGA AQUI\n"
     f"{ENLACE_CANAL}"
 )
 
@@ -73,6 +73,9 @@ def home():
         "👉 <a href='/test/piramide'>Probar Pirámide Numérica</a><br>"
         "👉 <a href='/test/regalos'>Probar Regalos del Día</a><br>"
         "👉 <a href='/test/saludo'>Probar Saludo Matutino</a><br>"
+        "👉 <a href='/test/estudio_manana'>Probar Estudio de las 8 AM</a><br>"
+        "👉 <a href='/test/estudio_mediodia'>Probar Estudio del Mediodía</a><br>"
+        "👉 <a href='/test/estudio_tarde'>Probar Estudio de la Tarde</a><br>"
         "👉 <a href='/test/bcv'>Probar Tasa Oficial BCV</a><br>"
         "👉 <a href='/test/sorteo'>Probar Cierre de Sorteo (Min 25/55)</a><br>"
         "👉 <a href='/test/cierre'>Probar Cierre de Jornada (8:00 PM)</a>"
@@ -98,6 +101,21 @@ def test_regalos():
 def test_saludo():
     enviar_saludo_matutino()
     return "Prueba de Saludo Matutino ejecutada."
+
+@app.route('/test/estudio_manana')
+def test_estudio_manana():
+    enviar_estudio_8am()
+    return "Prueba de Estudio de las 8 AM ejecutada."
+
+@app.route('/test/estudio_mediodia')
+def test_estudio_mediodia():
+    enviar_estudio_mediodia()
+    return "Prueba de Estudio del Mediodía ejecutada."
+
+@app.route('/test/estudio_tarde')
+def test_estudio_tarde():
+    enviar_estudio_tarde()
+    return "Prueba de Estudio de la Tarde ejecutada."
 
 @app.route('/test/bcv')
 def test_bcv():
@@ -234,6 +252,44 @@ def enviar_regalos_diarios():
     )
     enviar_telegram(mensaje_regalos, disable_web_preview=True)
 
+# --- NUEVOS MENSAJES DE ESTUDIO SEGÚN EL SORTEO ---
+def enviar_estudio_8am():
+    mensaje = (
+        "🎯 *AGENCIA FyD* 🎯\n"
+        "_Trabajamos para tí_\n\n"
+        "🔍 *ESTUDIO DEL SORTEO DE LAS 8:00 AM* 🔍\n\n"
+        "¡Analizando cómo abrió la pizarra tempranito! Las tendencias nos muestran un comportamiento fuerte en los animales bajos y de madriguera.\n\n"
+        "💡 *El Regalito Caliente tras la apertura:* `08` (🐭 Ratón) y `13` (🐵 Mono)\n\n"
+        "📲 *WHATSAPP:* 04249611372\n"
+        f"{ENLACE_CANAL}"
+    )
+    enviar_telegram(mensaje, disable_web_preview=True)
+
+def enviar_estudio_mediodia():
+    mensaje = (
+        "🎯 *AGENCIA FyD* 🎯\n"
+        "_Trabajamos para tí_\n\n"
+        "☀️ *ESTUDIO DEL MEDIODÍA* ☀️\n\n"
+        "¡Mitad de jornada analizada! Ya vimos el comportamiento de la mañana y los repetidos empiezan a calentar el tablero.\n\n"
+        "🔥 *El Dato Explosivo para la tarde:* `24` (🦎 Iguana) y `31` (🐾 Perro)\n\n"
+        "📲 *WHATSAPP:* 04249611372\n"
+        f"{ENLACE_CANAL}"
+    )
+    enviar_telegram(mensaje, disable_web_preview=True)
+
+def enviar_estudio_tarde():
+    mensaje = (
+        "🎯 *AGENCIA FyD* 🎯\n"
+        "_Trabajamos para tí_\n\n"
+        "🌇 *CIERRE Y ESTUDIO DE LA TARDE* 🌇\n\n"
+        "¡A minutos de cerrar la jornada fuerte! Tras evaluar los resultados de todo el día, la casa preparó la jugada decisiva.\n\n"
+        "🎯 *Tripleta recomendada para reventar:* `13 - 24 - 00`\n"
+        "⚡️ *Imparable de cierre:* `36` (🐍 Culebra)\n\n"
+        "📲 *WHATSAPP:* 04249611372\n"
+        f"{ENLACE_CANAL}"
+    )
+    enviar_telegram(mensaje, disable_web_preview=True)
+
 def enviar_saludo_matutino():
     enviar_telegram(
         "🎯 AGENCIA FyD 🎯\n"
@@ -341,7 +397,6 @@ def verificar_y_enviar_resultados_individuales():
 
             nombre_loteria = limpiar_texto(nombre_loteria)
             
-            # Aplicar traducción si coincide con las siglas
             for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
                 if sigla in nombre_loteria.upper() or nombre_loteria.upper() == sigla:
                     nombre_loteria = nombre_largo
@@ -410,12 +465,12 @@ def verificar_minuto():
             ultimo_aviso_minuto = clave_tiempo
 
 # ==========================================
-# COMANDOS /resumen Y /tabla BLINDADOS CONTRA ERRORES
+# COMANDOS /resumen Y /tabla (FORMATO LIMPIO DIRECTO)
 # ==========================================
 @bot.message_handler(commands=['resumen', 'tabla'])
 def cmd_resumen(message):
     try:
-        bot.reply_to(message, "🔍 Consultando tabla de resultados actual, por favor espera...")
+        bot.reply_to(message, "🔍 Consultando resumen de resultados actual, por favor espera...")
         
         headers = {'User-Agent': 'Mozilla/5.0'}
         respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
@@ -452,7 +507,6 @@ def cmd_resumen(message):
 
                 nombre_loteria = limpiar_texto(nombre_loteria)
                 
-                # Aplicar traducción a nombre oficial
                 for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
                     if sigla in nombre_loteria.upper() or nombre_loteria.upper() == sigla:
                         nombre_loteria = nombre_largo
@@ -478,55 +532,60 @@ def cmd_resumen(message):
                         hora = match_h.group(1).upper()
 
                         if "PENDIENTE" in texto_slot:
-                            resumen_por_loterias[nombre_loteria].append(f"• {hora}: ⏳ Pendiente")
+                            resumen_por_loterias[nombre_loteria].append(f"• {hora} ➔ ⏳ Pendiente")
                         else:
                             match_res = re.search(r'(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)', texto_slot)
                             if match_res:
                                 resultado = limpiar_texto(match_res.group(1)).upper()
-                                resumen_por_loterias[nombre_loteria].append(f"• {hora}: {resultado}")
+                                resumen_por_loterias[nombre_loteria].append(f"• {hora} ➔ {resultado}")
                     except Exception:
                         continue
             except Exception:
                 continue
 
         if not resumen_por_loterias:
-            bot.reply_to(message, "⚠️ No se encontraron resultados disponibles para armar la tabla en este momento.")
+            bot.reply_to(message, "⚠️ No se encontraron resultados disponibles en este momento.")
             return
 
-        # Construcción del mensaje con el Encabezado Oficial de la Agencia FyD (Texto Plano sin Markdown)
         fecha_hoy = datetime.now().strftime("%d/%m/%Y")
         texto_final = (
-            "🎯 AGENCIA FyD 🎯\n"
+            "🎯 *AGENCIA FyD* 🎯\n"
             "_Trabajamos para tí_\n\n"
-            "📊 TABLA RESUMEN DE RESULTADOS 📊\n"
+            "📊 *RESUMEN DE GANADORES DEL DÍA* 📊\n"
             f"📅 Fecha: {fecha_hoy}\n\n"
         )
 
         for loteria, items in resumen_por_loterias.items():
             if items:
-                texto_final += f"🎲 {loteria}:\n"
+                texto_final += f"🎲 *{loteria}*\n"
                 for item in items:
                     texto_final += f"  {item}\n"
                 texto_final += "\n"
 
-        texto_final += f"📲 WHATSAPP: 04249611372\n{ENLACE_CANAL}"
+        texto_final += f"📲 *WHATSAPP:* 04249611372\n{ENLACE_CANAL}"
 
-        # Envío seguro como texto plano para evitar errores de entidades
         if len(texto_final) > 4000:
             for x in range(0, len(texto_final), 4000):
-                bot.send_message(message.chat.id, texto_final[x:x+4000])
+                bot.send_message(message.chat.id, texto_final[x:x+4000], parse_mode="Markdown")
         else:
-            bot.send_message(message.chat.id, texto_final)
+            bot.send_message(message.chat.id, texto_final, parse_mode="Markdown")
 
     except Exception as e:
         print(f"Error general en comando tabla: {e}")
         bot.reply_to(message, f"⚠️ Error técnico: {str(e)}")
 
 def loop_bot():
+    # Programación de rutinas matutinas y estudios del día
     schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
     schedule.every().day.at("06:45").do(enviar_regalos_diarios)
     schedule.every().day.at("07:00").do(enviar_saludo_matutino)
+    
+    # Nuevos bloques de estudio según avance el día
+    schedule.every().day.at("08:15").do(enviar_estudio_8am)       # Tras el sorteo de las 8 AM
+    schedule.every().day.at("12:15").do(enviar_estudio_mediodia)  # Analizando el mediodía
+    schedule.every().day.at("16:15").do(enviar_estudio_tarde)     # Análisis y cierre de la tarde
+
     schedule.every().day.at("06:30").do(enviar_tasa_dolar)
     schedule.every().day.at("18:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
