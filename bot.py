@@ -1,27 +1,9 @@
-import os
-os.environ['TZ'] = 'America/Caracas'
-try:
-    import time
-    if hasattr(time, 'tzset'):
-        time.tzset()
-except Exception as e:
-    print(f"⚠️ Nota sobre tzset: {e}")
-
-import requests
-from bs4 import BeautifulSoup
-import time
-import schedule
-from threading import Thread
-from flask import Flask
-import re
-import urllib3
 from datetime import datetime
-import json
+import threading
+import time
+from flask import Flask
+import schedule
 import telebot
-import traceback
-import random
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 TOKEN = '7691909067:AAG4EdkF0-_lpefI9ewFpo6AMhqawBZztAM'
 CANAL = '@agenciafyd'
@@ -29,316 +11,171 @@ ENLACE_CANAL = 'https://t.me/+x4A5d5Jpu44yNzc5'
 
 bot = telebot.TeleBot(TOKEN)
 
-URL_LOTERIA = 'https://lotery.winbigvzla.com/resultados'
-URL_BCV = 'https://www.bcv.org.ve/'
+# --- NUEVA ESTRUCTURA PARA LAS TABLAS ---
+resultados_memoria = {
+    "08:00": {},
+    "08:30": {},
+    "09:00": {},
+    "09:30": {},
+    "10:00": {},
+    "10:30": {},
+    "11:00": {},
+    "11:30": {},
+    "12:00": {},
+    "12:30": {},
+    "13:00": {},
+    "13:30": {},
+    "14:00": {},
+    "14:30": {},
+    "15:00": {},
+    "15:30": {},
+    "16:00": {},
+    "16:30": {},
+    "17:00": {},
+    "17:30": {},
+    "18:00": {},
+    "18:30": {},
+    "19:00": {},
+}
 
-ARCH_REGISTRO = "resultados_enviados.json"
+# Orden estricto de las loterías agrupadas por bloques
+LOTERIAS_BLOQUES = [
+    # Bloque 1
+    "Lotto Activo",
+    "La Granjita",
+    "Selva Plus",
+    "Lotto Real",
+    # Bloque 2
+    "Guácharo Activo",
+    "Loto Chaima",
+    "Monje Millonario",
+    # Bloque 3
+    "Lotto RD",
+    "Lotto Inter",
+    "Guacharito Millonario",
+    # Bloque 4
+    "Guaca Activa",
+    "Mega Guaca",
+]
 
-HEADER_FyD = (
-    "Resultado: AGENCIA FyD\n"
-    "JUEGA AQUI\n"
-    "RESULTADOS ANIMALITOS\n\n"
-    "🎲 {nombre_loteria} 🎲\n"
-    "Hora: {hora}\n"
-    "Animalito: *{resultado}*\n\n"
-    f"{ENLACE_CANAL}"
+
+def redondear_a_media_hora(hora_str):
+  """Ajusta la hora del resultado al formato de 30 minutos (ej: 08:05 -> 08:00)"""
+  try:
+    dt = datetime.strptime(hora_str, "%H:%M")
+    minuto = 0 if dt.minute < 30 else 30
+    return dt.replace(minute=minuto, second=0).strftime("%H:%M")
+  except:
+    ahora = datetime.now()
+    minuto = 0 if ahora.minute < 30 else 30
+    return ahora.replace(minute=minuto, second=0).strftime("%H:%M")
+
+
+def guardar_resultado_en_memoria(nombre_loteria, hora_resultado, resultado):
+  """Función que debes llamar cada vez que obtengas un resultado individual."""
+  slot_tiempo = redondear_a_media_hora(hora_resultado)
+  if slot_tiempo not in resultados_memoria:
+    resultados_memoria[slot_tiempo] = {}
+  resultados_memoria[slot_tiempo][nombre_loteria] = resultado
+
+
+def construir_y_enviar_tabla(rango_minutos_desc):
+  """Genera y envía la tabla en formato Unicode según el rango de tiempo acumulado."""
+  hoy = datetime.now().strftime("%d/%m/%Y")
+
+  slots_activos = [
+      s for s in sorted(resultados_memoria.keys()) if resultados_memoria[s]
+  ]
+
+  if not slots_activos:
+    return  # Si no hay datos, no envía nada.
+
+  columnas = LOTERIAS_BLOQUES[:4]  # Muestra un bloque de 4 loterías por tabla
+
+  texto_tabla = (
+      f"🍀 AGENCIA F&D 🍀\n"
+      f"✨ ¡La suerte comienza aquí! ✨\n"
+      f"📊 RESULTADOS ANIMALITOS\n"
+      f"📅 {hoy}\n\n"
+      f"```text\n"
+  )
+
+  header_row = "┌───────" + "┬──────" * len(columnas) + "┐\n"
+  header_row += "│ HORA  "
+  for lot in columnas:
+    header_row += f"│{lot[:5]:<6}"
+  header_row += "│\n"
+  header_row += "├───────" + "┼──────" * len(columnas) + "┤\n"
+
+  texto_tabla += header_row
+
+  for slot in slots_activos[:6]:
+    fila = f"│{slot}   "
+    for lot in columnas:
+      res = resultados_memoria[slot].get(lot, "----")
+      fila += f"│{res:<6}"
+    fila += "│\n"
+    texto_tabla += fila
+
+  footer_row = "└───────" + "┴──────" * len(columnas) + "┘\n"
+  texto_tabla += footer_row
+  texto_tabla += "```\n"
+
+  texto_tabla += (
+      "🍀 Gracias por preferir Agencia F&D\n"
+      "🎯 ¡Mucha suerte en cada jugada!"
+  )
+
+  # Enviar al canal usando la variable correcta (CANAL)
+  try:
+    bot.send_message(CANAL, texto_tabla, parse_mode="Markdown")
+  except Exception as e:
+    print(f"Error al enviar tabla automática: {e}")
+
+  for slot in slots_activos:
+    resultados_memoria[slot].clear()
+
+
+# --- PROGRAMACIÓN DE ENVÍOS CON SCHEDULE ---
+schedule.every().hour.at(":10").do(
+    lambda: construir_y_enviar_tabla("00 a 10")
+)
+schedule.every().hour.at(":20").do(
+    lambda: construir_y_enviar_tabla("11 a 20")
+)
+schedule.every().hour.at(":40").do(
+    lambda: construir_y_enviar_tabla("30 a 40")
 )
 
-app = Flask('')
 
-@app.route('/')
+def ejecutar_programador():
+  while True:
+    schedule.run_pending()
+    time.sleep(1)
+    
+# --- COMANDO DE PRUEBA DESDE TELEGRAM ---
+@bot.message_handler(commands=['tabla', 'probar'])
+def enviar_prueba_manual(message):
+  try:
+    construir_y_enviar_tabla('Manual')
+  except Exception as e:
+    bot.reply_to(message, f'Error al generar la prueba: {e}')
+
+# --- SERVIDOR FLASK PARA MANTENERSE ACTIVO EN RENDER ---
+app = Flask(__name__)
+
+
+@app.route("/")
 def home():
-    return "Bot Agencia FyD activo y con filtro estricto."
+  return "Bot de Telegram activo y operando 24/7."
 
-@app.route('/test/madrugada')
-def test_madrugada():
-    enviar_saludo_madrugada()
-    return "Prueba de madrugada ejecutada."
 
-@app.route('/test/piramide')
-def test_piramide():
-    enviar_piramide_diaria()
-    return "Prueba de pirámide ejecutada."
+if __name__ == "__main__":
+  hilo_schedule = threading.Thread(target=ejecutar_programador)
+  hilo_schedule.daemon = True
+  hilo_schedule.start()
 
-@app.route('/test/regalo')
-def test_regalo():
-    enviar_datos_regalo()
-    return "Prueba de regalo automático ejecutada."
+  import os
 
-@app.route('/test/saludo')
-def test_saludo():
-    enviar_saludo_matutino()
-    return "Prueba de saludo ejecutada."
-
-@app.route('/test/bcv')
-def test_bcv():
-    enviar_tasa_dolar()
-    return "Prueba de BCV ejecutada."
-
-@app.route('/test/cierre')
-def test_cierre():
-    enviar_mensaje_cierre()
-    return "Prueba de cierre ejecutada."
-
-def limpiar_texto(texto):
-    return " ".join(texto.split())
-
-def enviar_telegram(mensaje, disable_web_preview=True):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CANAL, 
-        "text": mensaje, 
-        "parse_mode": "Markdown", 
-        "disable_web_page_preview": disable_web_preview
-    }
-    try:
-        response = requests.post(url, json=payload, timeout=10)
-        print(f"Telegram respuesta: {response.status_code} - {response.text}")
-    except Exception as e:
-        print(f"⚠️ Excepción en Telegram: {e}")
-
-def enviar_saludo_madrugada():
-    enviar_telegram("🎯 AGENCIA FyD\n_Trabajamos para tí_\n\n🌅 ¡Despertando con la mejor energía! 🌅\nTaquilla Activa\n\nWHATSAPP: 0424-9611372")
-
-def generar_piramide():
-    ahora = datetime.now()
-    fecha_str = ahora.strftime("%d/%m/%Y")
-    digitos = [int(c) for c in fecha_str if c.isdigit()]
-    filas = [digitos]
-    while len(filas[-1]) > 1:
-        actual = filas[-1]
-        siguiente = [(actual[i] + actual[i+1]) % 10 for i in range(len(actual) - 1)]
-        filas.append(siguiente)
-    
-    lineas_formateadas = []
-    for i, f in enumerate(filas):
-        nums_str = "  ".join(str(d) for d in f)
-        dots_count = 3 + (i * 2)
-        lineas_formateadas.append(f"{'.' * dots_count}  {nums_str}  {'.' * dots_count}")
-    
-    cuerpo_piramide = "\n".join(lineas_formateadas)
-    return f"*AGENCIA FyD*\n📢 REPORTE TÁCTICO - LA PIRÁMIDE 📢\n\n📅 Fecha: {fecha_str}\n\n{cuerpo_piramide}\n\nWHATSAPP: 04249611372"
-
-def enviar_piramide_diaria():
-    enviar_telegram(generar_piramide())
-
-def enviar_datos_regalo():
-    # Lista oficial de animalitos para mapear los cálculos automáticos
-    tabla_animalitos = {
-        0: "0 - Delfín / 00 - Ballena",
-        1: "1 - Carnero",
-        2: "2 - Toro",
-        3: "3 - Ciempiés",
-        4: "4 - Alacrán",
-        5: "5 - León",
-        6: "6 - Rana",
-        7: "7 - Perico",
-        8: "8 - Ratón",
-        9: "9 - Águila",
-        10: "10 - Tigre",
-        11: "11 - Gato",
-        12: "12 - Caballo",
-        13: "13 - Mono",
-        14: "14 - Paloma",
-        15: "15 - Zorro",
-        16: "16 - Oso",
-        17: "17 - Pavo",
-        18: "18 - Burro",
-        19: "19 - Chivo",
-        20: "20 - Cochino",
-        21: "21 - Gallo",
-        22: "22 - Camello",
-        23: "23 - Cebra",
-        24: "24 - Iguana",
-        25: "25 - Gallina",
-        26: "26 - Vaca",
-        27: "27 - Perro",
-        28: "28 - Zamuro",
-        29: "29 - Elefante",
-        30: "30 - Caimán",
-        31: "31 - Lapa",
-        32: "32 - Ardilla",
-        33: "33 - Pescado",
-        34: "34 - Venado",
-        35: "35 - Girafa",
-        36: "36 - Culebra"
-    }
-
-    # Generación táctica automática basada en la fecha del día
-    ahora = datetime.now()
-    fecha_str = ahora.strftime("%d/%m/%Y")
-    digitos = [int(c) for c in fecha_str if c.isdigit()]
-    
-    # Combinamos algoritmos matemáticos con los dígitos del día para obtener 3 jugadas fijas únicas
-    num_1 = (digitos[0] + digitos[2] + digitos[4]) % 37
-    num_2 = (sum(digitos)) % 37
-    num_3 = abs(digitos[1] - digitos[3] + digitos[5]) % 37
-
-    regalo_1 = tabla_animalitos.get(num_1, "12 - Caballo")
-    regalo_2 = tabla_animalitos.get(num_2, "24 - Iguana")
-    regalo_3 = tabla_animalitos.get(num_3, "0 - Delfín")
-
-    mensaje = (
-        "*AGENCIA FyD*\n"
-        "🎁 ¡REGALO TÁCTICO DEL DÍA! 🎁\n\n"
-        "Selección automática basada en la fecha de hoy:\n\n"
-        f"🎯 *{regalo_1}*\n"
-        f"🎯 *{regalo_2}*\n"
-        f"🎯 *{regalo_3}*\n\n"
-        "¡Mucha suerte a todos nuestros jugadores!\n\n"
-        "📲 WHATSAPP: 0424-9611372\n\n"
-        f"{ENLACE_CANAL}"
-    )
-    enviar_telegram(mensaje)
-
-def enviar_saludo_matutino():
-    enviar_telegram("*🎯 AGENCIA FyD 🎯*\n☀️ ¡Buenos días! Arrancamos la jornada con la mejor actitud.\n\n📲 WHATSAPP: 0424-9611372")
-
-def enviar_tasa_dolar():
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(URL_BCV, headers=headers, timeout=15, verify=False)
-        precio_dolar = "742,23"
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            dolar_div = soup.find('div', id='dolar')
-            if dolar_div and dolar_div.find('strong'):
-                precio_dolar = dolar_div.find('strong').get_text(strip=True)
-        enviar_telegram(f"*💵 TASA OFICIAL BCV 💵*\n📈 Precio Oficial: Bs. {precio_dolar}\nVerifica la tasa oficial en: {URL_BCV}")
-    except Exception as e:
-        print(f"Error BCV: {e}")
-
-def enviar_mensaje_cierre():
-    enviar_telegram("*AGENCIA FyD*\n🌙 ¡FINAL DE JORNADA! 🌙\nGracias por jugar con nosotros.")
-
-def cargar_registros():
-    if os.path.exists(ARCH_REGISTRO):
-        try:
-            with open(ARCH_REGISTRO, "r") as f:
-                data = json.load(f)
-                if data.get("fecha") == datetime.now().strftime("%d-%m-%Y"):
-                    return set(data.get("enviados", []))
-        except Exception:
-            pass
-    return set()
-
-def guardar_registros(enviados_set):
-    data = {
-        "fecha": datetime.now().strftime("%d-%m-%Y"),
-        "enviados": list(enviados_set)
-    }
-    try:
-        with open(ARCH_REGISTRO, "w") as f:
-            json.dump(data, f)
-    except Exception as e:
-        print(f"Error al guardar registros: {e}")
-
-def verificar_y_enviar_resultados_individuales():
-    enviados_hoy = cargar_registros()
-    
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
-        if respuesta.status_code != 200:
-            return
-
-        soup = BeautifulSoup(respuesta.text, 'html.parser')
-        bloques = soup.find_all(['div', 'article', 'section'], class_=re.compile(r'card|box|item|lotto|result', re.IGNORECASE))
-        
-        hubo_cambios = False
-
-        for tarjeta in bloques:
-            if tarjeta.find(['div', 'article', 'section'], class_=re.compile(r'card|box|item|lotto|result', re.IGNORECASE)) and len(tarjeta.find_all(text=re.compile(r'\d{1,2}:\d{2}'))) > 2:
-                continue
-
-            nombre_loteria = ""
-            posibles_titulos = tarjeta.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'span', 'div', 'strong', 'b'], class_=re.compile(r'title|header|name|lotto|text', re.IGNORECASE))
-            for pt in posibles_titulos:
-                t_text = pt.get_text(" ", strip=True).upper()
-                if t_text and len(t_text) > 2 and not re.search(r'\d{1,2}:\d{2}', t_text) and "PENDIENTE" not in t_text:
-                    if t_text not in ["WINBIG", "RESULTADOS"]:
-                        nombre_loteria = t_text
-                        break
-
-            if not nombre_loteria or len(nombre_loteria) > 40:
-                continue
-
-            nombre_loteria = limpiar_texto(nombre_loteria)
-            if "RULETA ROYAL" in nombre_loteria.upper():
-                continue
-
-            slots_sorteo = tarjeta.find_all(['div', 'li', 'span', 'tr'], class_=re.compile(r'item|slot|draw|row|col', re.IGNORECASE))
-            if not slots_sorteo:
-                slots_sorteo = [tarjeta]
-
-            for slot in slots_sorteo:
-                texto_slot = slot.get_text(" ", strip=True).upper()
-                if "PENDIENTE" in texto_slot:
-                    continue
-
-                match_h = re.search(r'(\d{1,2}:\d{2}\s*(?:AM|PM))', texto_slot)
-                if not match_h:
-                    continue
-                hora = match_h.group(1).upper()
-
-                match_res = re.search(r'(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)', texto_slot)
-                if not match_res:
-                    continue
-
-                resultado = limpiar_texto(match_res.group(1)).upper()
-                
-                id_resultado = f"{nombre_loteria}_{hora}"
-
-                if id_resultado not in enviados_hoy:
-                    mensaje = HEADER_FyD.format(
-                        nombre_loteria=nombre_loteria,
-                        hora=hora,
-                        resultado=resultado
-                    )
-                    enviar_telegram(mensaje)
-                    enviados_hoy.add(id_resultado)
-                    hubo_cambios = True
-                    time.sleep(2)
-
-        if hubo_cambios:
-            guardar_registros(enviados_hoy)
-
-    except Exception as e:
-        print(f"Error al verificar resultados individuales: {e}")
-
-def loop_bot():
-    schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
-    schedule.every().day.at("06:31").do(enviar_piramide_diaria)
-    schedule.every().day.at("06:35").do(enviar_datos_regalo)  # <--- Regalo automático programado
-    schedule.every().day.at("07:00").do(enviar_saludo_matutino)
-    schedule.every().day.at("16:30").do(enviar_tasa_dolar)
-    schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
-    
-    schedule.every(1).minute.do(verificar_y_enviar_resultados_individuales)
-
-    while True:
-        try:
-            schedule.run_pending()
-        except Exception as e:
-            print(f"Error en schedule: {e}")
-        time.sleep(1)
-
-def iniciar_polling_bot():
-    while True:
-        try:
-            bot.infinity_polling(skip_pending=True, interval=3, timeout=20)
-        except Exception as e:
-            print(f"Error en polling: {e}")
-            time.sleep(5)
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    t_schedule = Thread(target=loop_bot)
-    t_schedule.daemon = True
-    t_schedule.start()
-
-    t_bot = Thread(target=iniciar_polling_bot)
-    t_bot.daemon = True
-    t_bot.start()
-
-    app.run(host='0.0.0.0', port=port)
+  port = int(os.environ.get("PORT", 10000))
+  app.run(host="0.0.0.0", port=port)
