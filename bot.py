@@ -1,4 +1,5 @@
-import os
+# Enviar sin parse_mode para evitar errores de sintaxis o asteriscos abiertos
+  import os
 # Forzar la zona horaria de Venezuela de forma segura para Windows y Linux
 os.environ['TZ'] = 'America/Caracas'
 try:
@@ -478,12 +479,12 @@ def cmd_resumen(message):
                         hora = match_h.group(1).upper()
 
                         if "PENDIENTE" in texto_slot:
-                            resumen_por_loterias[nombre_loteria].append(f"• {hora}: ⏳ *Pendiente*")
+                            resumen_por_loterias[nombre_loteria].append(f"• {hora}: ⏳ Pendiente")
                         else:
                             match_res = re.search(r'(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)', texto_slot)
                             if match_res:
                                 resultado = limpiar_texto(match_res.group(1)).upper()
-                                resumen_por_loterias[nombre_loteria].append(f"• {hora}: *{resultado}*")
+                                resumen_por_loterias[nombre_loteria].append(f"• {hora}: {resultado}")
                     except Exception:
                         continue
             except Exception:
@@ -493,33 +494,35 @@ def cmd_resumen(message):
             bot.reply_to(message, "⚠️ No se encontraron resultados disponibles para armar la tabla en este momento.")
             return
 
-        # Construcción del mensaje con el Encabezado Oficial de la Agencia FyD
+        # Construcción del mensaje con el Encabezado Oficial de la Agencia FyD (Texto Plano sin Markdown)
         fecha_hoy = datetime.now().strftime("%d/%m/%Y")
         texto_final = (
-            "🎯 *AGENCIA FyD* 🎯\n"
+            "🎯 AGENCIA FyD 🎯\n"
             "_Trabajamos para tí_\n\n"
-            "📊 *TABLA RESUMEN DE RESULTADOS* 📊\n"
+            "📊 TABLA RESUMEN DE RESULTADOS 📊\n"
             f"📅 Fecha: {fecha_hoy}\n\n"
         )
 
         for loteria, items in resumen_por_loterias.items():
             if items:
-                texto_final += f"🎲 *{loteria}*:\n"
+                texto_final += f"🎲 {loteria}:\n"
                 for item in items:
                     texto_final += f"  {item}\n"
                 texto_final += "\n"
 
-        texto_final += f"📲 *WHATSAPP:* 04249611372\n{ENLACE_CANAL}"
+        texto_final += f"📲 WHATSAPP: 04249611372\n{ENLACE_CANAL}"
 
+        # Envío seguro como texto plano para evitar errores de entidades
         if len(texto_final) > 4000:
             for x in range(0, len(texto_final), 4000):
-                bot.send_message(message.chat.id, texto_final[x:x+4000], parse_mode="Markdown")
+                bot.send_message(message.chat.id, texto_final[x:x+4000])
         else:
-            bot.send_message(message.chat.id, texto_final, parse_mode="Markdown")
+            bot.send_message(message.chat.id, texto_final)
 
     except Exception as e:
         print(f"Error general en comando tabla: {e}")
         bot.reply_to(message, f"⚠️ Error técnico: {str(e)}")
+
 def loop_bot():
     schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
