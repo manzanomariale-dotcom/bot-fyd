@@ -73,9 +73,9 @@ def home():
         "👉 <a href='/test/piramide'>Probar Pirámide Numérica</a><br>"
         "👉 <a href='/test/regalos'>Probar Regalos del Día</a><br>"
         "👉 <a href='/test/saludo'>Probar Saludo Matutino</a><br>"
-        "👉 <a href='/test/estudio_manana'>Probar Estudio de las 8 AM</a><br>"
-        "👉 <a href='/test/estudio_mediodia'>Probar Estudio del Mediodía</a><br>"
-        "👉 <a href='/test/estudio_tarde'>Probar Estudio de la Tarde</a><br>"
+        "👉 <a href='/test/estudio_manana'>Probar Análisis de las 8 AM</a><br>"
+        "👉 <a href='/test/estudio_mediodia'>Probar Análisis del Mediodía</a><br>"
+        "👉 <a href='/test/estudio_tarde'>Probar Análisis de la Tarde</a><br>"
         "👉 <a href='/test/bcv'>Probar Tasa Oficial BCV</a><br>"
         "👉 <a href='/test/sorteo'>Probar Cierre de Sorteo (Min 25/55)</a><br>"
         "👉 <a href='/test/cierre'>Probar Cierre de Jornada (8:00 PM)</a>"
@@ -105,17 +105,17 @@ def test_saludo():
 @app.route('/test/estudio_manana')
 def test_estudio_manana():
     enviar_estudio_8am()
-    return "Prueba de Estudio de las 8 AM ejecutada."
+    return "Prueba de Análisis de las 8 AM ejecutada."
 
 @app.route('/test/estudio_mediodia')
 def test_estudio_mediodia():
     enviar_estudio_mediodia()
-    return "Prueba de Estudio del Mediodía ejecutada."
+    return "Prueba de Análisis del Mediodía ejecutada."
 
 @app.route('/test/estudio_tarde')
 def test_estudio_tarde():
     enviar_estudio_tarde()
-    return "Prueba de Estudio de la Tarde ejecutada."
+    return "Prueba de Análisis de la Tarde ejecutada."
 
 @app.route('/test/bcv')
 def test_bcv():
@@ -252,14 +252,14 @@ def enviar_regalos_diarios():
     )
     enviar_telegram(mensaje_regalos, disable_web_preview=True)
 
-# --- NUEVOS MENSAJES DE ESTUDIO SEGÚN EL SORTEO ---
+# --- ANÁLISIS Y REGALITOS BASADOS EN EL AVANCE DE LOS SORTEOS ---
 def enviar_estudio_8am():
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
         "_Trabajamos para tí_\n\n"
-        "🔍 *ESTUDIO DEL SORTEO DE LAS 8:00 AM* 🔍\n\n"
-        "¡Analizando cómo abrió la pizarra tempranito! Las tendencias nos muestran un comportamiento fuerte en los animales bajos y de madriguera.\n\n"
-        "💡 *El Regalito Caliente tras la apertura:* `08` (🐭 Ratón) y `13` (🐵 Mono)\n\n"
+        "🔍 *ANÁLISIS TRAS EL SORTEO DE LAS 8:00 AM* 🔍\n\n"
+        "¡Ya salieron los primeros animalitos! Evaluando la apertura de la pizarra, la casa trae las recomendaciones probables a salir para los siguientes sorteos:\n\n"
+        "🔥 *Regalitos recomendados:* `13` (🐵 Mono) y `24` (🦎 Iguana)\n\n"
         "📲 *WHATSAPP:* 04249611372\n"
         f"{ENLACE_CANAL}"
     )
@@ -269,9 +269,10 @@ def enviar_estudio_mediodia():
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
         "_Trabajamos para tí_\n\n"
-        "☀️ *ESTUDIO DEL MEDIODÍA* ☀️\n\n"
-        "¡Mitad de jornada analizada! Ya vimos el comportamiento de la mañana y los repetidos empiezan a calentar el tablero.\n\n"
-        "🔥 *El Dato Explosivo para la tarde:* `24` (🦎 Iguana) y `31` (🐾 Perro)\n\n"
+        "☀️ *ANÁLISIS DEL MEDIODÍA* ☀️\n\n"
+        "¡Mitad de jornada! Estudiando los resultados matutinos, el tablero apunta hacia las siguientes proyecciones:\n\n"
+        "🔥 *Animales calientes:* `31` (🐾 Perro) y `00` (🐬 Delfín)\n"
+        "🎯 *Tripleta recomendada:* `13 - 24 - 00`\n\n"
         "📲 *WHATSAPP:* 04249611372\n"
         f"{ENLACE_CANAL}"
     )
@@ -281,10 +282,9 @@ def enviar_estudio_tarde():
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
         "_Trabajamos para tí_\n\n"
-        "🌇 *CIERRE Y ESTUDIO DE LA TARDE* 🌇\n\n"
-        "¡A minutos de cerrar la jornada fuerte! Tras evaluar los resultados de todo el día, la casa preparó la jugada decisiva.\n\n"
-        "🎯 *Tripleta recomendada para reventar:* `13 - 24 - 00`\n"
-        "⚡️ *Imparable de cierre:* `36` (🐍 Culebra)\n\n"
+        "🌇 *ANÁLISIS Y CIERRE DE LA TARDE* 🌇\n\n"
+        "¡A pocas horas de terminar la jornada! Evaluando el comportamiento de los últimos sorteos, la casa trae los animales con mayor probabilidad de reventar en la pizarra para asegurar el cierre:\n\n"
+        "⚡️ *Imparables de la Tarde / Cierre:* `15` (🦊 Zorro) y `36` (🐍 Culebra)\n\n"
         "📲 *WHATSAPP:* 04249611372\n"
         f"{ENLACE_CANAL}"
     )
@@ -575,16 +575,16 @@ def cmd_resumen(message):
         bot.reply_to(message, f"⚠️ Error técnico: {str(e)}")
 
 def loop_bot():
-    # Programación de rutinas matutinas y estudios del día
+    # Programación de rutinas matutinas y análisis del día
     schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
     schedule.every().day.at("06:45").do(enviar_regalos_diarios)
     schedule.every().day.at("07:00").do(enviar_saludo_matutino)
     
-    # Nuevos bloques de estudio según avance el día
-    schedule.every().day.at("08:15").do(enviar_estudio_8am)       # Tras el sorteo de las 8 AM
-    schedule.every().day.at("12:15").do(enviar_estudio_mediodia)  # Analizando el mediodía
-    schedule.every().day.at("16:15").do(enviar_estudio_tarde)     # Análisis y cierre de la tarde
+    # Análisis y regalitos automáticos tras los sorteos clave
+    schedule.every().day.at("08:15").do(enviar_estudio_8am)       # Tras ver los resultados de las 8 AM
+    schedule.every().day.at("12:15").do(enviar_estudio_mediodia)  # Mitad de jornada (con tripleta)
+    schedule.every().day.at("16:15").do(enviar_estudio_tarde)     # Cierre de tarde (sin tripleta)
 
     schedule.every().day.at("06:30").do(enviar_tasa_dolar)
     schedule.every().day.at("18:30").do(enviar_tasa_dolar)
