@@ -5,7 +5,12 @@ import random
 import re
 from threading import Thread
 import time
-from bs4 import Flask, requests, schedule, telebot, urllib3
+from bs4 import BeautifulSoup
+from flask import Flask
+import requests
+import schedule
+import telebot
+import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -383,7 +388,6 @@ def verificar_y_enviar_resultados_individuales():
     print(f"Error al verificar resultados individuales: {e}")
 
 
-# --- NUEVAS FUNCIONES PARA CONSTRUIR Y ENVIAR LAS TABLAS POR BLOQUES ---
 def construir_y_enviar_tabla(bloque_id):
   hoy = datetime.now().strftime("%d-%m-%Y")
   hoy_legible = datetime.now().strftime("%d/%m/%Y")
@@ -398,22 +402,18 @@ def construir_y_enviar_tabla(bloque_id):
     titulo_seccion = "📊 **RESULTADOS - BLOQUE (hasta 40)**"
     loterias_a_usar = LOTERIAS_BLOQUE_3
 
-  # Recopilamos de los registros guardados de hoy
   enviados_hoy = cargar_registros()
 
   slots_dict = {}
   for item in enviados_hoy:
-    # Formato esperado en el id_resultado: "NOMBRE_LOTERIA_HORA"
     partes = item.rsplit("_", 1)
     if len(partes) == 2:
       lot, hora = partes[0], partes[1]
       if lot in loterias_a_usar:
         if hora not in slots_dict:
           slots_dict[hora] = {}
-        # Buscamos el resultado exacto si está guardado o mapeado, de lo contrario omitimos o ponemos marca
         slots_dict[hora][lot] = "✅"
 
-  # Si no hay datos registrados todavía para este bloque, ponemos un respaldo visual
   if not slots_dict:
     slots_dict["09:00"] = {lot: "----" for lot in loterias_a_usar}
 
@@ -453,7 +453,6 @@ def loop_bot():
   schedule.every().day.at("16:30").do(enviar_tasa_dolar)
   schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
 
-  # Programación automática de las tablas por bloques a los minutos indicados
   schedule.every().hour.at(":10").do(lambda: construir_y_enviar_tabla(1))
   schedule.every().hour.at(":20").do(lambda: construir_y_enviar_tabla(2))
   schedule.every().hour.at(":40").do(lambda: construir_y_enviar_tabla(3))
