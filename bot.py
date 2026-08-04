@@ -519,8 +519,7 @@ def cmd_resumen(message):
 
     except Exception as e:
         print(f"Error general en comando tabla: {e}")
-        bot.reply_to(message, "⚠️ Ocurrió un error al procesar los datos de la tabla. Intenta de nuevo en unos segundos.")
-
+        bot.reply_to(message, f"⚠️ Error técnico: {str(e)}")
 def loop_bot():
     schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
