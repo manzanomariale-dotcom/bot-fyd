@@ -229,7 +229,7 @@ def enviar_saludo_matutino():
         "_Trabajamos para tí_\n\n"
         "☀️ ¡Buenos días! Arrancamos la jornada con la mejor actitud y la mejor energía para ganar.\n\n"
         "📲 WHATSAPP: 04249611372\n"
-        "¡Mucho éxito en tus jugadas de hoy! 🍀🔥",
+        "¡Mucho éxito in tus jugadas de hoy! 🍀🔥",
         disable_web_preview=True
     )
 
@@ -380,12 +380,17 @@ def verificar_y_enviar_resultados_individuales():
     except Exception as e:
         print(f"Error al verificar resultados individuales: {e}")
 
+ultimo_aviso_minuto = ""
+
 def verificar_minuto():
+    global ultimo_aviso_minuto
     ahora = datetime.now()
     minuto_actual = ahora.minute
     if minuto_actual in [25, 55]:
-        enviar_aviso_cierre_sorteo()
-        time.sleep(65)
+        clave_tiempo = ahora.strftime("%H:%M")
+        if ultimo_aviso_minuto != clave_tiempo:
+            enviar_aviso_cierre_sorteo()
+            ultimo_aviso_minuto = clave_tiempo
 
 def loop_bot():
     schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
@@ -396,15 +401,16 @@ def loop_bot():
     schedule.every().day.at("18:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
     
-    schedule.every(1).minute.do(verificar_y_enviar_resultados_individuales)
     schedule.every(1).minute.do(verificar_minuto)
 
+    # Ciclo principal optimizado para revisar resultados cada 30 segundos
     while True:
         try:
             schedule.run_pending()
+            verificar_y_enviar_resultados_individuales()
         except Exception as e:
-            print(f"Error en schedule: {e}")
-        time.sleep(1)
+            print(f"Error en loop principal: {e}")
+        time.sleep(30)
 
 def iniciar_polling_bot():
     while True:
