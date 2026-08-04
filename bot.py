@@ -29,7 +29,7 @@ HEADER_FyD = (
     "Resultado: AGENCIA FyD\n"
     "JUEGA AQUI\n"
     "RESULTADOS ANIMALITOS\n\n"
-    "🎲 {nombre_loteria} 🎲\n"
+    "🎲 *{nombre_loteria}* 🎲\n"
     "Hora: {hora}\n"
     "Animalito: *{resultado}*\n\n"
     f"{ENLACE_CANAL}"
@@ -40,7 +40,7 @@ app = Flask("")
 
 @app.route("/")
 def home():
-  return "Bot Agencia FyD activo y adaptado."
+  return "Bot Agencia FyD activo y con nombre de lotería."
 
 
 @app.route("/test/madrugada")
@@ -77,6 +77,28 @@ def test_bcv():
 def test_cierre():
   enviar_mensaje_cierre()
   return "Prueba de cierre ejecutada."
+
+
+@app.route("/test/escanear")
+def test_escanear():
+  try:
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,"
+            " like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+    }
+    respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
+    if respuesta.status_code != 200:
+      return f"Error al conectar: {respuesta.status_code}"
+
+    soup = BeautifulSoup(respuesta.text, "html.parser")
+    texto_pagina = soup.get_text(separator=" | ", strip=True)
+    return (
+        f"<h3>Texto extraído de la página:</h3><p>{texto_pagina[:1500]}</p>"
+    )
+  except Exception as e:
+    return f"Error: {e}"
 
 
 def limpiar_texto(texto):
@@ -272,53 +294,49 @@ def verificar_y_enviar_resultados_individuales():
       return
 
     soup = BeautifulSoup(respuesta.text, "html.parser")
-    # Buscamos de forma más amplia cualquier contenedor de texto o tarjeta en la página
     bloques = soup.find_all(
-        ["div", "article", "section", "li", "span"],
+        ["div", "article", "section", "li"],
         class_=re.compile(
             r"card|box|item|lotto|result|result-item|sorteo", re.IGNORECASE
         ),
     )
     if not bloques:
-      bloques = soup.find_all(
-          True
-      )  # Fallback general si cambia la estructura
+      bloques = [soup]
 
     hubo_cambios = False
 
     for tarjeta in bloques:
-      texto_tarjeta = tarjeta.get_text(" ", strip=True).upper()
+      texto_bloque = tarjeta.get_text(" | ", strip=True).upper()
 
-      # Buscamos si el bloque contiene una hora válida y un resultado de animalito
-      match_h = re.search(r"(\d{1,2}:\d{2}\s*(?:AM|PM))", texto_tarjeta)
-      if not match_h:
-        continue
-      hora = match_h.group(1).upper()
-
-      match_res = re.search(
-          r"(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)",
-          texto_tarjeta,
+      # Buscamos coincidencias de lotería, hora y resultado estructurado
+      # Ejemplo: LOTO ACTIVO | 09:00 AM | 12 - GATO
+      patrones = re.finditer(
+          r"([A-ZÁÉÍÓÚÑ\s]{3,25})\s*\|\s*(\d{1,2}:\d{2}\s*(?:AM|PM))\s*\|\s*(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+)",
+          texto_bloque,
       )
-      if not match_res:
-        continue
 
-      resultado = limpiar_texto(match_res.group(1)).upper()
+      for match in patrones:
+        nombre_loteria = limpiar_texto(match.group(1))
+        hora = match.group(2).upper()
+        resultado = limpiar_texto(match.group(3)).upper()
 
-      # Intentamos deducir el nombre de la lotería del bloque o texto cercano
-      nombre_loteria = "WINBIG"
-      if "RULETA" in texto_tarjeta:
-        continue  # Omitir ruleta royal si no se requiere
+        if (
+            "WINBIG" in nombre_loteria
+            or "RESULTADOS" in nombre_loteria
+            or len(nombre_loteria) < 3
+        ):
+          continue
 
-      id_resultado = f"{hora}_{resultado}"
+        id_resultado = f"{nombre_loteria}_{hora}"
 
-      if id_resultado not in enviados_hoy:
-        mensaje = HEADER_FyD.format(
-            nombre_loteria=nombre_loteria, hora=hora, resultado=resultado
-        )
-        enviar_telegram(mensaje)
-        enviados_hoy.add(id_resultado)
-        hubo_cambios = True
-        time.sleep(2)
+        if id_resultado not in enviados_hoy:
+          mensaje = HEADER_FyD.format(
+              nombre_loteria=nombre_loteria, hora=hora, resultado=resultado
+          )
+          enviar_telegram(mensaje)
+          enviados_hoy.add(id_resultado)
+          hubo_cambios = True
+          time.sleep(2)
 
     if hubo_cambios:
       guardar_registros(enviados_hoy)
