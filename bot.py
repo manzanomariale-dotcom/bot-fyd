@@ -37,7 +37,7 @@ app = Flask("")
 
 @app.route("/")
 def home():
-  return "Bot Agencia FyD activo y con nombres de lotería ajustados."
+  return "Bot Agencia FyD activo y con control estricto anti-repetición."
 
 
 @app.route("/test/madrugada")
@@ -76,10 +76,19 @@ def test_cierre():
   return "Prueba de cierre ejecutada."
 
 
-@app.route("/test/forzar")
-def test_forzar():
-  verificar_y_enviar_resultados_individuales()
-  return "Revisión forzada ejecutada con captura estricta de nombres."
+@app.route("/test/probar-envio")
+def probar_envio():
+  mensaje = (
+      "Resultado: AGENCIA FyD\n"
+      "JUEGA AQUI\n"
+      "RESULTADOS ANIMALITOS\n\n"
+      "🎲 *LOTTO ACTIVO* 🎲\n"
+      "Hora: 09:00 AM\n"
+      "Animalito: *12 - Caballo*\n\n"
+      f"{ENLACE_CANAL}"
+  )
+  enviar_telegram(mensaje)
+  return "Prueba de envío forzado ejecutada."
 
 
 def limpiar_texto(texto):
@@ -219,9 +228,9 @@ def enviar_tasa_dolar():
     precio_dolar = "742,23"
     if response.status_code == 200:
       soup = BeautifulSoup(response.text, "html.parser")
-      dolar_div = soup.find("div", id="dolar")
-      if dolar_div and dolar_div.find("strong"):
-        precio_dolar = dolar_div.find("strong").get_text(strip=True)
+    dolar_div = soup.find("div", id="dolar")
+    if dolar_div and dolar_div.find("strong"):
+      precio_dolar = dolar_div.find("strong").get_text(strip=True)
     enviar_telegram(
         f"*💵 TASA OFICIAL BCV 💵*\n📈 Precio Oficial: Bs."
         f" {precio_dolar}\nVerifica la tasa oficial en: {URL_BCV}"
@@ -275,8 +284,6 @@ def verificar_y_enviar_resultados_individuales():
       return
 
     soup = BeautifulSoup(respuesta.text, "html.parser")
-
-    # Buscamos bloques individuales (tarjetas o contenedores de cada sorteo)
     tarjetas = soup.find_all(
         ["div", "article", "section", "li"],
         class_=re.compile(
@@ -284,16 +291,13 @@ def verificar_y_enviar_resultados_individuales():
         ),
     )
     if not tarjetas:
-      tarjetas = soup.find_all(
-          ["div", "section"]
-      )  # Fallback a contenedores generales
+      tarjetas = soup.find_all(["div", "section"])
 
     hubo_cambios = False
 
     for tarjeta in tarjetas:
       texto_tarjeta = tarjeta.get_text(" | ", strip=True).upper()
 
-      # Verificamos que contenga una hora y un resultado de animalito
       match_h = re.search(r"(\d{1,2}:\d{2}\s*(?:AM|PM))", texto_tarjeta)
       match_res = re.search(
           r"(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)",
@@ -306,34 +310,31 @@ def verificar_y_enviar_resultados_individuales():
       hora = match_h.group(1).upper()
       resultado = limpiar_texto(match_res.group(1)).upper()
 
-      # Intentamos extraer el nombre de la lotería limpiando palabras basura
-      nombre_loteria = "WINBIG"
-      palabras_ignorar = [
-          "WINBIG",
-          "RESULTADOS",
-          "PENDIENTE",
-          "SORTEO",
-          "ANIMALITOS",
-          hora,
-          resultado,
-      ]
+      # Filtramos por si dice pendiente o no tiene animalito real
+      if "PENDIENTE" in resultado or len(resultado) < 3:
+        continue
 
-      # Buscamos encabezados o textos cortos dentro de la tarjeta que sirvan de título
+      # Intentamos extraer el nombre de la lotería limpiando etiquetas
+      nombre_loteria = ""
       posibles_titulos = tarjeta.find_all(
           ["h1", "h2", "h3", "h4", "h5", "span", "strong", "b", "div"]
       )
       for pt in posibles_titulos:
         t_text = pt.get_text(" ", strip=True).upper()
         if (
-            3 <= len(t_text) <= 30
+            3 <= len(t_text) <= 25
             and not re.search(r"\d{1,2}:\d{2}", t_text)
             and "PENDIENTE" not in t_text
-            and t_text not in palabras_ignorar
+            and "WINBIG" not in t_text
             and not any(p in t_text for p in [" - ", "AGENCIA", "FyD"])
         ):
           nombre_loteria = t_text
           break
 
+      if not nombre_loteria:
+        continue  # Si no detecta nombre de lotería válido, salta para evitar genéricos repetidos
+
+      # Llave única estricta combinando Lotería + Hora + Animalito exacto
       id_resultado = f"{nombre_loteria}_{hora}_{resultado}"
 
       if id_resultado not in enviados_hoy:
