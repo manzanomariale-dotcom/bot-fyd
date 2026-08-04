@@ -45,7 +45,7 @@ HEADER_FyD = (
     "*Resultado: AGENCIA FyD*\n"
     "JUEGA AQUI\n"
     "RESULTADOS ANIMALITOS\n\n"
-    "🎲 {nombre_loteria} 🎲\n"
+    "🎲 *{nombre_loteria}* 🎲\n"
     "Hora: {hora}\n"
     "Animalito: *{resultado}*\n\n"
     f"{ENLACE_CANAL}"
