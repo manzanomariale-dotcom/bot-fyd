@@ -52,13 +52,13 @@ TRADUCCION_LOTERIAS = {
 }
 
 HEADER_FyD = (
-    "Resultado: *AGENCIA FyD*\n"
-    "Hora: {hora_str}\n"
+    "*AGENCIA FyD*\n"
     "JUEGA AQUI\n"
-    "RESULTADOS ANIMALITOS\n\n"
+    "*RESULTADOS*\n\n"
     "🎲 *{nombre_loteria}* 🎲\n"
     "Hora: {hora}\n"
     "Animalito: *{resultado}*\n\n"
+    "JUEGA AQUI\n"
     f"{ENLACE_CANAL}"
 )
 
