@@ -64,7 +64,7 @@ def home():
         "👉 <a href='/test/saludo'>Probar Saludo Matutino</a><br>"
         "👉 <a href='/test/bcv'>Probar Tasa Oficial BCV</a><br>"
         "👉 <a href='/test/sorteo'>Probar Cierre de Sorteo (Min 25/55)</a><br>"
-        "👉 <a href='/test/cierre'>Probar Mensaje de Cierre (8:00 PM)</a>"
+        "👉 <a href='/test/cierre'>Probar Cierre de Jornada (8:00 PM)</a>"
     )
 
 # --- RUTAS DE PRUEBA MANUAL (TESTS) ---
@@ -229,7 +229,7 @@ def enviar_saludo_matutino():
         "_Trabajamos para tí_\n\n"
         "☀️ ¡Buenos días! Arrancamos la jornada con la mejor actitud y la mejor energía para ganar.\n\n"
         "📲 WHATSAPP: 04249611372\n"
-        "¡Mucho éxito in tus jugadas de hoy! 🍀🔥",
+        "¡Mucho éxito en tus jugadas de hoy! 🍀🔥",
         disable_web_preview=True
     )
 
@@ -392,6 +392,98 @@ def verificar_minuto():
             enviar_aviso_cierre_sorteo()
             ultimo_aviso_minuto = clave_tiempo
 
+# ==========================================
+# NUEVO: COMANDO PARA RESUMEN POR LOTERÍAS
+# ==========================================
+@bot.message_handler(commands=['resumen'])
+def cmd_resumen(message):
+    try:
+        bot.reply_to(message, "🔍 Consultando resultados actuales, por favor espera un momento...")
+        
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
+        if respuesta.status_code != 200:
+            bot.reply_to(message, "⚠️ No se pudo conectar con la página de resultados en este momento.")
+            return
+
+        soup = BeautifulSoup(respuesta.text, 'html.parser')
+        tarjetas = soup.find_all(['div', 'article', 'section'], class_=re.compile(r'card|box|item|lotto|result', re.IGNORECASE))
+
+        resumen_por_loterias = {}
+
+        for tarjeta in tarjetas:
+            nombre_loteria = ""
+            posibles_titulos = tarjeta.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'span', 'div', 'strong', 'b'], class_=re.compile(r'title|header|name|lotto|text', re.IGNORECASE))
+            for pt in posibles_titulos:
+                t_text = pt.get_text(" ", strip=True).upper()
+                if t_text and len(t_text) > 2 and not re.search(r'\d{1,2}:\d{2}', t_text) and "PENDIENTE" not in t_text:
+                    if t_text not in ["WINBIG", "RESULTADOS", "RESULTADOS ANIMALITOS", "ANIMALITOS"]:
+                        nombre_loteria = t_text
+                        break
+
+            if not nombre_loteria:
+                lineas = [l.strip().upper() for l in tarjeta.get_text("\n", strip=True).split("\n") if l.strip()]
+                for linea in lineas:
+                    if len(linea) > 2 and not re.search(r'\d{1,2}:\d{2}', linea) and "PENDIENTE" not in linea and "-" not in linea:
+                        if linea not in ["RESULTADOS ANIMALITOS", "ANIMALITOS", "RESULTADOS"]:
+                            nombre_loteria = linea
+                            break
+
+            if not nombre_loteria or len(nombre_loteria) > 40:
+                continue
+
+            nombre_loteria = limpiar_texto(nombre_loteria)
+            if "RULETA ROYAL" in nombre_loteria.upper() or "RESULTADOS" in nombre_loteria.upper():
+                continue
+
+            if nombre_loteria not in resumen_por_loterias:
+                resumen_por_loterias[nombre_loteria] = []
+
+            slots_sorteo = tarjeta.find_all(['div', 'li', 'span', 'tr'], class_=re.compile(r'item|slot|draw|row|col', re.IGNORECASE))
+            if not slots_sorteo:
+                slots_sorteo = [tarjeta]
+
+            for slot in slots_sorteo:
+                texto_slot = slot.get_text(" ", strip=True).upper()
+                
+                match_h = re.search(r'(\d{1,2}:\d{2}\s*(?:AM|PM))', texto_slot)
+                if not match_h:
+                    continue
+                hora = match_h.group(1).upper()
+
+                if "PENDIENTE" in texto_slot:
+                    resumen_por_loterias[nombre_loteria].append(f"• {hora}: ⏳ *Pendiente*")
+                else:
+                    match_res = re.search(r'(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)', texto_slot)
+                    if match_res:
+                        resultado = limpiar_texto(match_res.group(1)).upper()
+                        resumen_por_loterias[nombre_loteria].append(f"• {hora}: *{resultado}*")
+
+        if not resumen_por_loterias:
+            bot.reply_to(message, "⚠️ No se encontraron resultados disponibles en este momento.")
+            return
+
+        # Construir el mensaje final agrupado
+        fecha_hoy = datetime.now().strftime("%d/%m/%Y")
+        texto_final = f"📊 *RESUMEN DE RESULTADOS* 📊\n📅 Fecha: {fecha_hoy}\n\n"
+
+        for loteria, items in resumen_por_loterias.items():
+            texto_final += f"🎲 *{loteria}*:\n"
+            for item in items:
+                texto_final += f"  {item}\n"
+            texto_final += "\n"
+
+        # Dividir el mensaje si es muy largo para que Telegram no lo rechace
+        if len(texto_final) > 4000:
+            for x in range(0, len(texto_final), 4000):
+                bot.send_message(message.chat.id, texto_final[x:x+4000], parse_mode="Markdown")
+        else:
+            bot.send_message(message.chat.id, texto_final, parse_mode="Markdown")
+
+    except Exception as e:
+        print(f"Error en comando resumen: {e}")
+        bot.reply_to(message, "⚠️ Ocurrió un error al generar el resumen.")
+
 def loop_bot():
     schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
@@ -403,7 +495,6 @@ def loop_bot():
     
     schedule.every(1).minute.do(verificar_minuto)
 
-    # Ciclo principal optimizado para revisar resultados cada 30 segundos
     while True:
         try:
             schedule.run_pending()
