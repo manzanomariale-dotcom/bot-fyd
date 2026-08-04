@@ -1,5 +1,4 @@
-# Enviar sin parse_mode para evitar errores de sintaxis o asteriscos abiertos
-  import os
+import os
 # Forzar la zona horaria de Venezuela de forma segura para Windows y Linux
 os.environ['TZ'] = 'America/Caracas'
 try:
