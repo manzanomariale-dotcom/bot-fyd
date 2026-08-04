@@ -40,9 +40,10 @@ URL_BCV = 'https://www.bcv.org.ve/'
 # Archivo local para control de registros persistentes y evitar duplicados
 ARCH_REGISTRO = "resultados_enviados.json"
 
-# Diccionario de abreviaturas oficiales solicitadas
+# Diccionario ampliado para capturar las variantes exactas de las loterías
 TRADUCCION_LOTERIAS = {
     "LOTTO ACTIVO": "L.A",
+    "ACTIVO": "L.A",
     "GRANJITA": "GRJ",
     "SELVA PLUS": "S.P",
     "LOTTO REAL": "L.RE",
@@ -348,7 +349,7 @@ def verificar_y_enviar_resultados_individuales():
 
             nombre_loteria = limpiar_texto(nombre_loteria)
             
-            # Normalizar nombre largo
+            # Normalizar nombre largo para individuales
             for loteria_larga in TRADUCCION_LOTERIAS.keys():
                 if loteria_larga in nombre_loteria.upper() or nombre_loteria.upper() in loteria_larga:
                     nombre_loteria = loteria_larga
@@ -432,7 +433,6 @@ def cmd_resumen(message):
         soup = BeautifulSoup(respuesta.text, 'html.parser')
         tarjetas = soup.find_all(['div', 'article', 'section'], class_=re.compile(r'card|box|item|lotto|result', re.IGNORECASE))
 
-        # Estructura para almacenar: { "LOTTO ACTIVO": { "08:00 AM": "34", ... }, ... }
         datos_tabla = {}
 
         for tarjeta in tarjetas:
@@ -459,12 +459,17 @@ def cmd_resumen(message):
 
                 nombre_loteria = limpiar_texto(nombre_loteria)
                 
-                # Mapeo flexible para asegurar que coincida con las claves
+                # Coincidencia precisa para Lotto Activo y demás loterías
                 nombre_encontrado = ""
-                for loteria_larga in TRADUCCION_LOTERIAS.keys():
-                    if loteria_larga in nombre_loteria.upper() or nombre_loteria.upper() in loteria_larga:
-                        nombre_encontrado = loteria_larga
-                        break
+                upper_nom = nombre_loteria.upper()
+                
+                if "LOTTO ACTIVO" in upper_nom or upper_nom == "ACTIVO":
+                    nombre_encontrado = "LOTTO ACTIVO"
+                else:
+                    for loteria_larga in TRADUCCION_LOTERIAS.keys():
+                        if loteria_larga in upper_nom or upper_nom in loteria_larga:
+                            nombre_encontrado = loteria_larga
+                            break
                 
                 if not nombre_encontrado:
                     continue
@@ -496,7 +501,6 @@ def cmd_resumen(message):
             except Exception:
                 continue
 
-        # Función auxiliar para extraer el número o dejar vacío
         def obtener_val(nombre_largo, hora_str):
             val = datos_tabla.get(nombre_largo, {}).get(hora_str, "")
             return val if val else ""
@@ -533,7 +537,6 @@ def cmd_resumen(message):
 
         texto_final += "\nSEGURIDAD Y CONFIANZA"
 
-        # Envío seguro como texto plano usando etiqueta <pre> para conservar espacios fijos
         if len(texto_final) > 4000:
             for x in range(0, len(texto_final), 4000):
                 bot.send_message(message.chat.id, f"<pre>{texto_final[x:x+4000]}</pre>", parse_mode="HTML")
