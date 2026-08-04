@@ -9,7 +9,6 @@ from bs4 import BeautifulSoup
 from flask import Flask
 import requests
 import schedule
-import telebot
 import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -17,8 +16,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 TOKEN = "7691909067:AAG4EdkF0-_lpefI9ewFpo6AMhqawBZztAM"
 CANAL = "@agenciafyd"
 ENLACE_CANAL = "https://t.me/+x4A5d5Jpu44yNzc5"
-
-bot = telebot.TeleBot(TOKEN)
 
 URL_LOTERIA = "https://lotery.winbigvzla.com/resultados"
 URL_BCV = "https://www.bcv.org.ve/"
@@ -40,7 +37,7 @@ app = Flask("")
 
 @app.route("/")
 def home():
-  return "Bot Agencia FyD activo y con nombre de lotería."
+  return "Bot Agencia FyD activo y sin conflictos de polling."
 
 
 @app.route("/test/madrugada")
@@ -77,28 +74,6 @@ def test_bcv():
 def test_cierre():
   enviar_mensaje_cierre()
   return "Prueba de cierre ejecutada."
-
-
-@app.route("/test/escanear")
-def test_escanear():
-  try:
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,"
-            " like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
-    }
-    respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
-    if respuesta.status_code != 200:
-      return f"Error al conectar: {respuesta.status_code}"
-
-    soup = BeautifulSoup(respuesta.text, "html.parser")
-    texto_pagina = soup.get_text(separator=" | ", strip=True)
-    return (
-        f"<h3>Texto extraído de la página:</h3><p>{texto_pagina[:1500]}</p>"
-    )
-  except Exception as e:
-    return f"Error: {e}"
 
 
 def limpiar_texto(texto):
@@ -308,8 +283,6 @@ def verificar_y_enviar_resultados_individuales():
     for tarjeta in bloques:
       texto_bloque = tarjeta.get_text(" | ", strip=True).upper()
 
-      # Buscamos coincidencias de lotería, hora y resultado estructurado
-      # Ejemplo: LOTO ACTIVO | 09:00 AM | 12 - GATO
       patrones = re.finditer(
           r"([A-ZÁÉÍÓÚÑ\s]{3,25})\s*\|\s*(\d{1,2}:\d{2}\s*(?:AM|PM))\s*\|\s*(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+)",
           texto_bloque,
@@ -363,23 +336,10 @@ def loop_bot():
     time.sleep(1)
 
 
-def iniciar_polling_bot():
-  while True:
-    try:
-      bot.infinity_polling(skip_pending=True, interval=3, timeout=20)
-    except Exception as e:
-      print(f"Error en polling: {e}")
-      time.sleep(5)
-
-
 if __name__ == "__main__":
   port = int(os.environ.get("PORT", 5000))
   t_schedule = Thread(target=loop_bot)
   t_schedule.daemon = True
   t_schedule.start()
-
-  t_bot = Thread(target=iniciar_polling_bot)
-  t_bot.daemon = True
-  t_bot.start()
 
   app.run(host="0.0.0.0", port=port)
