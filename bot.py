@@ -41,11 +41,14 @@ URL_BCV = 'https://www.bcv.org.ve/'
 ARCH_REGISTRO = "resultados_enviados.json"
 
 HEADER_FyD = (
+    "RESULTADO OFICIAL\n"
     "Hora: {hora_str}\n"
-    "*Resultado: AGENCIA FyD*\n"
+    "Resultado: AGENCIA FyD\n"
+    "_Trabajamos para tí_\n"
     "JUEGA AQUI\n"
+    "WHATSAPP: 04249611372\n"
     "RESULTADOS ANIMALITOS\n\n"
-    "🎲 *{nombre_loteria}* 🎲\n"
+    "🎲 {nombre_loteria} 🎲\n"
     "Hora: {hora}\n"
     "Animalito: *{resultado}*\n\n"
     f"{ENLACE_CANAL}"
@@ -64,7 +67,6 @@ def home():
         "👉 <a href='/test/saludo'>Probar Saludo Matutino</a><br>"
         "👉 <a href='/test/bcv'>Probar Tasa Oficial BCV</a><br>"
         "👉 <a href='/test/cierre'>Probar Mensaje de Cierre (8:00 PM)</a>"
-        "👉 <a href='/test/resultados'>Probar Resultados Manualmente</a>"
     )
 
 # --- RUTAS DE PRUEBA MANUAL (TESTS) ---
@@ -97,11 +99,6 @@ def test_bcv():
 def test_cierre():
     enviar_mensaje_cierre()
     return "Prueba de Cierre de Jornada ejecutada."
-
-@app.route('/test/resultados')
-def test_resultados():
-    verificar_y_enviar_resultados_individuales()
-    return "Prueba de verificación de resultados ejecutada."
 
 def limpiar_texto(texto):
     return " ".join(texto.split())
@@ -285,6 +282,7 @@ def guardar_registros(enviados_set):
 
 def verificar_y_enviar_resultados_individuales():
     enviados_hoy = cargar_registros()
+    es_primera_ejecucion = len(enviados_hoy) == 0
     
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
@@ -296,6 +294,7 @@ def verificar_y_enviar_resultados_individuales():
         tarjetas = soup.find_all(['div', 'article', 'section'], class_=re.compile(r'card|box|item|lotto|result', re.IGNORECASE))
 
         hubo_cambios = False
+        nuevos_para_guardar = set(enviados_hoy)
 
         for tarjeta in tarjetas:
             nombre_loteria = ""
@@ -303,7 +302,7 @@ def verificar_y_enviar_resultados_individuales():
             for pt in posibles_titulos:
                 t_text = pt.get_text(" ", strip=True).upper()
                 if t_text and len(t_text) > 2 and not re.search(r'\d{1,2}:\d{2}', t_text) and "PENDIENTE" not in t_text:
-                    if t_text not in ["WINBIG", "RESULTADOS"]:
+                    if t_text not in ["WINBIG", "RESULTADOS", "RESULTADOS ANIMALITOS", "ANIMALITOS"]:
                         nombre_loteria = t_text
                         break
 
@@ -311,15 +310,16 @@ def verificar_y_enviar_resultados_individuales():
                 lineas = [l.strip().upper() for l in tarjeta.get_text("\n", strip=True).split("\n") if l.strip()]
                 for linea in lineas:
                     if len(linea) > 2 and not re.search(r'\d{1,2}:\d{2}', linea) and "PENDIENTE" not in linea and "-" not in linea:
-                        nombre_loteria = linea
-                        break
+                        if linea not in ["RESULTADOS ANIMALITOS", "ANIMALITOS", "RESULTADOS"]:
+                            nombre_loteria = linea
+                            break
 
             if not nombre_loteria or len(nombre_loteria) > 40:
                 continue
 
             nombre_loteria = limpiar_texto(nombre_loteria)
             
-            if "RULETA ROYAL" in nombre_loteria.upper():
+            if "RULETA ROYAL" in nombre_loteria.upper() or "RESULTADOS" in nombre_loteria.upper():
                 continue
 
             slots_sorteo = tarjeta.find_all(['div', 'li', 'span', 'tr'], class_=re.compile(r'item|slot|draw|row|col', re.IGNORECASE))
@@ -342,8 +342,11 @@ def verificar_y_enviar_resultados_individuales():
 
                 resultado = limpiar_texto(match_res.group(1)).upper()
                 
-                # Llave única por lotería y hora para envío individual seguro
                 id_resultado = f"{nombre_loteria}_{hora}_{resultado}"
+
+                if es_primera_ejecucion:
+                    nuevos_para_guardar.add(id_resultado)
+                    continue
 
                 if id_resultado not in enviados_hoy:
                     hora_actual_str = datetime.now().strftime("%I:%M %p")
@@ -354,18 +357,19 @@ def verificar_y_enviar_resultados_individuales():
                         resultado=resultado
                     )
                     enviar_telegram(mensaje)
-                    enviados_hoy.add(id_resultado)
+                    nuevos_para_guardar.add(id_resultado)
                     hubo_cambios = True
                     time.sleep(1.5)
 
-        if hubo_cambios:
-            guardar_registros(enviados_hoy)
+        if es_primera_ejecucion:
+            guardar_registros(nuevos_para_guardar)
+        elif hubo_cambios:
+            guardar_registros(nuevos_para_guardar)
 
     except Exception as e:
         print(f"Error al verificar resultados individuales: {e}")
 
 def loop_bot():
-    # Saludos, regalos y avisos fijos
     schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
     schedule.every().day.at("06:45").do(enviar_regalos_diarios)
@@ -374,7 +378,6 @@ def loop_bot():
     schedule.every().day.at("18:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
     
-    # Escaneo y envío automático de resultados individuales cada 1 minuto
     schedule.every(1).minute.do(verificar_y_enviar_resultados_individuales)
 
     while True:
