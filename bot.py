@@ -93,15 +93,15 @@ def test_bcv():
     enviar_tasa_dolar()
     return "Prueba de Tasa BCV ejecutada."
 
-@app.route('/test/cierre')
-def test_cierre():
-    enviar_mensaje_cierre()
-    return "Prueba de Cierre de Jornada ejecutada."
-
 @app.route('/test/sorteo')
 def test_sorteo():
     enviar_aviso_cierre_sorteo()
     return "Prueba de Cierre de Sorteo ejecutada."
+
+@app.route('/test/cierre')
+def test_cierre():
+    enviar_mensaje_cierre()
+    return "Prueba de Cierre de Jornada ejecutada."
 
 def limpiar_texto(texto):
     return " ".join(texto.split())
@@ -263,9 +263,9 @@ def enviar_mensaje_cierre():
 
 def enviar_aviso_cierre_sorteo():
     enviar_telegram(
-        "🎯 *AGENCIA FyD* 🎯\n"
-        "_Trabajamos para tí_\n\n"
-        "⏰ *Sorteo cerrado. ¡Mucha suerte en sus apuestas!* 🍀",
+        "🛑 *¡ATENCIÓN!* 🛑\n\n"
+        "El tiempo de jugadas ha terminado por este sorteo en la **AGENCIA FyD**.\n\n"
+        "🤞 ¡Cruzamos los dedos por ti, mucha suerte en tus apuestas! 🎲🔥",
         disable_web_preview=True
     )
 
