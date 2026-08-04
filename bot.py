@@ -79,6 +79,30 @@ def test_cierre():
   return "Prueba de cierre ejecutada."
 
 
+@app.route("/test/escanear")
+def test_escanear():
+  """Ruta de diagnóstico para ver qué lee el bot en la web de lotería"""
+  try:
+    headers = {"User-Agent": "Mozilla/5.0"}
+    respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
+    if respuesta.status_code != 200:
+      return f"Error al conectar con la lotería: {respuesta.status_code}"
+
+    soup = BeautifulSoup(respuesta.text, "html.parser")
+    bloques = soup.find_all(
+        ["div", "article", "section"],
+        class_=re.compile(r"card|box|item|lotto|result", re.IGNORECASE),
+    )
+
+    debug_info = f"Total bloques encontrados: {len(bloques)}<br><hr>"
+    for i, tarjeta in enumerate(bloques[:5]):  # Muestra los primeros 5 bloques
+      debug_info += f"<b>Bloque {i+1}:</b><br>{tarjeta.get_text(' ', strip=True)}<br><br>"
+
+    return debug_info
+  except Exception as e:
+    return f"Excepción en diagnóstico: {str(e)}"
+
+
 def limpiar_texto(texto):
   return " ".join(texto.split())
 
@@ -278,7 +302,7 @@ def verificar_y_enviar_resultados_individuales():
       if tarjeta.find(
           ["div", "article", "section"],
           class_=re.compile(r"card|box|item|lotto|result", re.IGNORECASE),
-      ) and len(tarjeta.find_all(text=re.compile(r"\d{1,2}:\d{2}"))) > 2:
+      ) and len(tarjeta.find_all(string=re.compile(r"\d{1,2}:\d{2}"))) > 2:
         continue
 
       nombre_loteria = ""
