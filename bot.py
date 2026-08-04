@@ -41,12 +41,9 @@ URL_BCV = 'https://www.bcv.org.ve/'
 ARCH_REGISTRO = "resultados_enviados.json"
 
 HEADER_FyD = (
-    "RESULTADO OFICIAL\n"
     "Hora: {hora_str}\n"
-    "Resultado: AGENCIA FyD\n"
-    "_Trabajamos para tí_\n"
+    "*Resultado: AGENCIA FyD*\n"
     "JUEGA AQUI\n"
-    "WHATSAPP: 04249611372\n"
     "RESULTADOS ANIMALITOS\n\n"
     "🎲 {nombre_loteria} 🎲\n"
     "Hora: {hora}\n"
