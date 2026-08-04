@@ -410,7 +410,7 @@ def verificar_minuto():
             ultimo_aviso_minuto = clave_tiempo
 
 # ==========================================
-# COMANDOS /resumen Y /tabla PARA REPORTE PRIVADO
+# COMANDOS /resumen Y /tabla BLINDADOS CONTRA ERRORES
 # ==========================================
 @bot.message_handler(commands=['resumen', 'tabla'])
 def cmd_resumen(message):
@@ -429,62 +429,68 @@ def cmd_resumen(message):
         resumen_por_loterias = {}
 
         for tarjeta in tarjetas:
-            nombre_loteria = ""
-            posibles_titulos = tarjeta.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'span', 'div', 'strong', 'b'], class_=re.compile(r'title|header|name|lotto|text', re.IGNORECASE))
-            for pt in posibles_titulos:
-                t_text = pt.get_text(" ", strip=True).upper()
-                if t_text and len(t_text) > 2 and not re.search(r'\d{1,2}:\d{2}', t_text) and "PENDIENTE" not in t_text:
-                    if t_text not in ["WINBIG", "RESULTADOS", "RESULTADOS ANIMALITOS", "ANIMALITOS"]:
-                        nombre_loteria = t_text
-                        break
-
-            if not nombre_loteria:
-                lineas = [l.strip().upper() for l in tarjeta.get_text("\n", strip=True).split("\n") if l.strip()]
-                for linea in lineas:
-                    if len(linea) > 2 and not re.search(r'\d{1,2}:\d{2}', linea) and "PENDIENTE" not in linea and "-" not in linea:
-                        if linea not in ["RESULTADOS ANIMALITOS", "ANIMALITOS", "RESULTADOS"]:
-                            nombre_loteria = linea
+            try:
+                nombre_loteria = ""
+                posibles_titulos = tarjeta.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'span', 'div', 'strong', 'b'], class_=re.compile(r'title|header|name|lotto|text', re.IGNORECASE))
+                for pt in posibles_titulos:
+                    t_text = pt.get_text(" ", strip=True).upper()
+                    if t_text and len(t_text) > 2 and not re.search(r'\d{1,2}:\d{2}', t_text) and "PENDIENTE" not in t_text:
+                        if t_text not in ["WINBIG", "RESULTADOS", "RESULTADOS ANIMALITOS", "ANIMALITOS"]:
+                            nombre_loteria = t_text
                             break
 
-            if not nombre_loteria or len(nombre_loteria) > 40:
-                continue
+                if not nombre_loteria:
+                    lineas = [l.strip().upper() for l in tarjeta.get_text("\n", strip=True).split("\n") if l.strip()]
+                    for linea in lineas:
+                        if len(linea) > 2 and not re.search(r'\d{1,2}:\d{2}', linea) and "PENDIENTE" not in linea and "-" not in linea:
+                            if linea not in ["RESULTADOS ANIMALITOS", "ANIMALITOS", "RESULTADOS"]:
+                                nombre_loteria = linea
+                                break
 
-            nombre_loteria = limpiar_texto(nombre_loteria)
-            
-            # Aplicar traducción a nombre oficial
-            for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
-                if sigla in nombre_loteria.upper() or nombre_loteria.upper() == sigla:
-                    nombre_loteria = nombre_largo
-                    break
-
-            if "RULETA ROYAL" in nombre_loteria.upper() or "RESULTADOS" in nombre_loteria.upper():
-                continue
-
-            if nombre_loteria not in resumen_por_loterias:
-                resumen_por_loterias[nombre_loteria] = []
-
-            slots_sorteo = tarjeta.find_all(['div', 'li', 'span', 'tr'], class_=re.compile(r'item|slot|draw|row|col', re.IGNORECASE))
-            if not slots_sorteo:
-                slots_sorteo = [tarjeta]
-
-            for slot in slots_sorteo:
-                texto_slot = slot.get_text(" ", strip=True).upper()
-                
-                match_h = re.search(r'\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b', texto_slot)
-                if not match_h:
+                if not nombre_loteria or len(nombre_loteria) > 40:
                     continue
-                hora = match_h.group(1).upper()
 
-                if "PENDIENTE" in texto_slot:
-                    resumen_por_loterias[nombre_loteria].append(f"• {hora}: ⏳ *Pendiente*")
-                else:
-                    match_res = re.search(r'(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)', texto_slot)
-                    if match_res:
-                        resultado = limpiar_texto(match_res.group(1)).upper()
-                        resumen_por_loterias[nombre_loteria].append(f"• {hora}: *{resultado}*")
+                nombre_loteria = limpiar_texto(nombre_loteria)
+                
+                # Aplicar traducción a nombre oficial
+                for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
+                    if sigla in nombre_loteria.upper() or nombre_loteria.upper() == sigla:
+                        nombre_loteria = nombre_largo
+                        break
+
+                if "RULETA ROYAL" in nombre_loteria.upper() or "RESULTADOS" in nombre_loteria.upper():
+                    continue
+
+                if nombre_loteria not in resumen_por_loterias:
+                    resumen_por_loterias[nombre_loteria] = []
+
+                slots_sorteo = tarjeta.find_all(['div', 'li', 'span', 'tr'], class_=re.compile(r'item|slot|draw|row|col', re.IGNORECASE))
+                if not slots_sorteo:
+                    slots_sorteo = [tarjeta]
+
+                for slot in slots_sorteo:
+                    try:
+                        texto_slot = slot.get_text(" ", strip=True).upper()
+                        
+                        match_h = re.search(r'\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b', texto_slot)
+                        if not match_h:
+                            continue
+                        hora = match_h.group(1).upper()
+
+                        if "PENDIENTE" in texto_slot:
+                            resumen_por_loterias[nombre_loteria].append(f"• {hora}: ⏳ *Pendiente*")
+                        else:
+                            match_res = re.search(r'(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)', texto_slot)
+                            if match_res:
+                                resultado = limpiar_texto(match_res.group(1)).upper()
+                                resumen_por_loterias[nombre_loteria].append(f"• {hora}: *{resultado}*")
+                    except Exception:
+                        continue
+            except Exception:
+                continue
 
         if not resumen_por_loterias:
-            bot.reply_to(message, "⚠️ No se encontraron resultados disponibles en este momento.")
+            bot.reply_to(message, "⚠️ No se encontraron resultados disponibles para armar la tabla en este momento.")
             return
 
         # Construcción del mensaje con el Encabezado Oficial de la Agencia FyD
@@ -497,10 +503,11 @@ def cmd_resumen(message):
         )
 
         for loteria, items in resumen_por_loterias.items():
-            texto_final += f"🎲 *{loteria}*:\n"
-            for item in items:
-                texto_final += f"  {item}\n"
-            texto_final += "\n"
+            if items:
+                texto_final += f"🎲 *{loteria}*:\n"
+                for item in items:
+                    texto_final += f"  {item}\n"
+                texto_final += "\n"
 
         texto_final += f"📲 *WHATSAPP:* 04249611372\n{ENLACE_CANAL}"
 
@@ -511,8 +518,8 @@ def cmd_resumen(message):
             bot.send_message(message.chat.id, texto_final, parse_mode="Markdown")
 
     except Exception as e:
-        print(f"Error en comando tabla: {e}")
-        bot.reply_to(message, "⚠️ Ocurrió un error al generar la tabla.")
+        print(f"Error general en comando tabla: {e}")
+        bot.reply_to(message, "⚠️ Ocurrió un error al procesar los datos de la tabla. Intenta de nuevo en unos segundos.")
 
 def loop_bot():
     schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
