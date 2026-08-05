@@ -66,12 +66,11 @@ TRADUCCION_LOTERIAS = {
 HEADER_FyD = (
     "Resultado: *AGENCIA FyD*\n"
     "Hora: {hora_str}\n"
-    
+    "JUEGA AQUI\n"
     "RESULTADOS ANIMALITOS\n\n"
     "🎲 *{nombre_loteria}* 🎲\n"
     "Hora: {hora}\n"
     "Animalito: *{resultado}*\n\n"
-    "JUEGA AQUI\n"
     f"{ENLACE_CANAL}"
 )
 
@@ -253,7 +252,6 @@ def enviar_regalos_diarios():
     )
     enviar_telegram(mensaje_regalos, disable_web_preview=True)
 
-# --- FUNCIÓN INTELIGENTE: EXTRAE LOS RESULTADOS YA SALIDOS PARA EVITARLOS Y ANALIZAR ---
 def obtener_animales_salidos_actuales():
     salidos = set()
     try:
@@ -262,7 +260,6 @@ def obtener_animales_salidos_actuales():
         if respuesta.status_code == 200:
             soup = BeautifulSoup(respuesta.text, 'html.parser')
             texto_total = soup.get_text(" ", strip=True)
-            # Buscar patrones de resultados tipo "34 - VENADO" o números solos que hayan salido
             matches = re.findall(r'(\d{1,2})\s*-\s*([A-ZÁÉÍÓÚÑa-zñáéíóú]+)', texto_total)
             for m in matches:
                 num_str = f"{int(m[0]):02d}" if m[0].isdigit() else m[0]
@@ -273,10 +270,8 @@ def obtener_animales_salidos_actuales():
 
 def seleccionar_analisis_dinamico(cantidad):
     salidos = obtener_animales_salidos_actuales()
-    # Filtrar el pool general excluyendo los que ya salieron hoy
     disponibles = [a for a in ANIMALES_POOL if a.split(" - ")[0].zfill(2) not in salidos]
     
-    # Si por alguna razón la web no responde o ya salieron todos, usar el pool completo
     if len(disponibles) < cantidad:
         disponibles = ANIMALES_POOL
 
@@ -284,7 +279,6 @@ def seleccionar_analisis_dinamico(cantidad):
     rnd = random.Random(seed_val)
     return rnd.sample(disponibles, cantidad)
 
-# --- ANÁLISIS DINÁMICOS BASADOS EN RESULTADOS REALES ---
 def enviar_estudio_8am():
     analisis = seleccionar_analisis_dinamico(2)
     mensaje = (
@@ -495,6 +489,12 @@ ultimo_aviso_minuto = ""
 def verificar_minuto():
     global ultimo_aviso_minuto
     ahora = datetime.now()
+    
+    # RESTRICCIÓN: Solo enviar aviso de cierre si la hora actual es menor o igual a las 7:55 PM (19:55)
+    # Si pasa de las 7:55 PM, no se envía más este aviso automático.
+    if ahora.hour > 19 or (ahora.hour == 19 and ahora.minute > 55):
+        return
+
     minuto_actual = ahora.minute
     if minuto_actual in [25, 55]:
         clave_tiempo = ahora.strftime("%H:%M")
