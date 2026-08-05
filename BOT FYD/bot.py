@@ -149,7 +149,7 @@ def test_cierre():
     enviar_mensaje_cierre()
     return "Prueba de Cierre de Jornada ejecutada."
 
-@app.route('/test/tabla1_fake')
+app.route('/test/tabla1_fake')
 def test_tabla1_fake():
     MEMORIA_TABLAS.clear()
 
