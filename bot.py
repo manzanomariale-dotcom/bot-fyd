@@ -162,10 +162,10 @@ def test_tabla1_fake():
         "LA GRANJITA": "36 - CULEBRA"
     }
 
+    # Forzamos el envío ignorando el registro viejo cambiando el tipo temporalmente
     enviar_tabla_tanda(1)
 
-    return "Prueba de Tabla 1 con orden de prioridad ejecutada."
-
+    return "Prueba de Tabla 1 ejecutada con fuerza."
 def limpiar_texto(texto):
     return " ".join(texto.split())
 
