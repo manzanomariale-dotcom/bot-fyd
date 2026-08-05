@@ -164,6 +164,13 @@ def test_forzar():
 def test_tabla1_fake():
     MEMORIA_TABLAS.clear()
 
+    # Borramos el archivo de registro de tablas para forzar el envío limpio
+    if os.path.exists(ARCH_TABLAS_REGISTRO):
+        try:
+            os.remove(ARCH_TABLAS_REGISTRO)
+        except Exception:
+            pass
+
     MEMORIA_TABLAS["08:00 AM"] = {
         "LOTTO REAL": "05 - LEÓN",
         "OTRA LOTERIA": "12 - CABALLO",
@@ -173,10 +180,10 @@ def test_tabla1_fake():
         "LA GRANJITA": "36 - CULEBRA"
     }
 
-    # Forzamos el envío ignorando el registro viejo cambiando el tipo temporalmente
     enviar_tabla_tanda(1)
 
-    return "Prueba de Tabla 1 ejecutada con fuerza."
+    return "¡Tabla 1 enviada a Telegram con éxito!"
+    
 def limpiar_texto(texto):
     return " ".join(texto.split())
 
