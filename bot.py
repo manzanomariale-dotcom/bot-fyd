@@ -202,17 +202,17 @@ def generar_piramide():
         actual = filas[-1]
         siguiente = [(actual[i] + actual[i+1]) % 10 for i in range(len(actual) - 1)]
         filas.append(siguiente)
-    
+     
     lineas_formateadas = []
     for i, f in enumerate(filas):
         nums_str = "  ".join(str(d) for d in f)
         dots_count = 3 + (i * 2)
         lineas_formateadas.append(f"{'.' * dots_count}  {nums_str}  {'.' * dots_count}")
-    
+     
     cuerpo_piramide = "\n".join(lineas_formateadas)
     seed_val = int(ahora.strftime("%Y%m%d"))
     rnd = random.Random(seed_val)
-    
+     
     candidates = []
     for f in filas:
         for idx in range(len(f) - 1):
@@ -223,21 +223,21 @@ def generar_piramide():
             val = (num * 7) % 37
             candidates.append(f"{val:02d}" if val != 0 else "0")
             candidates.append("00")
-            
+             
     unique_candidates = []
     for c in candidates:
         if c not in unique_candidates:
             unique_candidates.append(c)
-            
+             
     while len(unique_candidates) < 6:
         r_val = rnd.randint(0, 36)
         c_rand = f"{r_val:02d}" if r_val != 0 else ("0" if rnd.random() > 0.5 else "00")
         if c_rand not in unique_candidates:
             unique_candidates.append(c_rand)
-            
+             
     d1 = f"{unique_candidates[0]}-{unique_candidates[1]}-{unique_candidates[2]}"
     d2 = f"{unique_candidates[3]}-{unique_candidates[4]}-{unique_candidates[5]}"
-    
+     
     return (
         "AGENCIA FyD\n"
         "_Trabajamos para tí_\n"
@@ -259,7 +259,7 @@ def enviar_regalos_diarios():
     seed_val = int(ahora.strftime("%Y%m%d")) + 99
     rnd = random.Random(seed_val)
     regalos_seleccionados = rnd.sample(ANIMALES_POOL, 3)
-    
+     
     mensaje_regalos = (
         "🎁 *LOS REGALOS DE LA AGENCIA FyD* 🎁\n"
         "_Trabajamos para tí_\n\n"
@@ -293,7 +293,7 @@ def obtener_animales_salidos_actuales():
 def seleccionar_analisis_dinamico(cantidad):
     salidos = obtener_animales_salidos_actuales()
     disponibles = [a for a in ANIMALES_POOL if a.split(" - ")[0].zfill(2) not in salidos]
-    
+     
     if len(disponibles) < cantidad:
         disponibles = ANIMALES_POOL
 
@@ -318,7 +318,7 @@ def enviar_estudio_mediodia():
     analisis = seleccionar_analisis_dinamico(2)
     tripleta = seleccionar_analisis_dinamico(3)
     t_str = f"{tripleta[0].split(' - ')[0]} - {tripleta[1].split(' - ')[0]} - {tripleta[2].split(' - ')[0]}"
-    
+     
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
         "_Trabajamos para tí_\n\n"
@@ -513,7 +513,7 @@ def obtener_abreviatura_dinamica(nombre_loteria):
     nombre_upper = limpiar_texto(nombre_loteria.upper())
     if nombre_upper in MAPA_ABREVIATURAS:
         return MAPA_ABREVIATURAS[nombre_upper]
-    
+     
     palabras = [p for p in nombre_upper.split() if p not in ["DE", "DEL", "LA", "EL", "LOS", "LAS"]]
     if not palabras:
         return nombre_upper[:4]
@@ -531,21 +531,21 @@ def formatear_celda_tabla(res_str):
         return "....🚫"
     if "PENDIENTE" in res_str or not res_str:
         return "....🚫"
-    
+     
     match = re.search(r'(\d{1,2})\s*-\s*([A-ZÁÉÍÓÚÑ]+)', res_str)
     if match:
         num_raw = match.group(1)
         num_fmt = f"{int(num_raw):02d}" if num_raw.isdigit() else num_raw
         emoji = EMOJIS_ANIMALES_FIJOS.get(num_fmt, "🐾")
         return f"{num_fmt}{emoji}"
-    
+     
     match_num = re.search(r'(\d{1,2})', res_str)
     if match_num:
         num_raw = match_num.group(1)
         num_fmt = f"{int(num_raw):02d}" if num_raw.isdigit() else num_raw
         emoji = EMOJIS_ANIMALES_FIJOS.get(num_fmt, "🐾")
         return f"{num_fmt}{emoji}"
-        
+         
     return "....🚫"
 
 def enviar_tabla_tanda(tipo_tanda):
@@ -604,7 +604,7 @@ def enviar_tabla_tanda(tipo_tanda):
             loterias_en_tanda = prioridad
 
         enviadas_hoy = cargar_tablas_registros()
-        
+         
         cuerpo = "📰 RESULTADOS ANIMALITOS 📰\n"
         cabecera = "HO_RA"
         for lot in loterias_en_tanda:
@@ -622,7 +622,7 @@ def enviar_tabla_tanda(tipo_tanda):
             cuerpo += f"{fila}\n"
 
         texto_final = cuerpo.strip()
-        
+         
         clave_tabla_id = f"tanda_{tipo_tanda}_" + "_".join([h.replace(" ", "") for h in horas_filtradas])
 
         if clave_tabla_id not in enviadas_hoy:
@@ -636,7 +636,7 @@ def enviar_tabla_tanda(tipo_tanda):
 def verificar_y_enviar_resultados_individuales():
     enviados_hoy = cargar_registros()
     es_primera_ejecucion = len(enviados_hoy) == 0
-    
+     
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
         respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
@@ -701,7 +701,7 @@ def verificar_y_enviar_resultados_individuales():
                     continue
 
                 resultado = limpiar_texto(match_res.group(1)).upper()
-                
+                 
                 if hora not in MEMORIA_TABLAS:
                     MEMORIA_TABLAS[hora] = {}
                 MEMORIA_TABLAS[hora][loteria_key] = resultado
@@ -738,7 +738,7 @@ ultimo_aviso_minuto = ""
 def verificar_minuto():
     global ultimo_aviso_minuto
     ahora = datetime.now()
-    
+     
     if ahora.hour > 19 or (ahora.hour == 19 and ahora.minute > 55):
         return
 
@@ -756,7 +756,7 @@ def verificar_minuto():
 def cmd_resumen(message):
     try:
         bot.reply_to(message, "🔍 Consultando resumen de resultados actual, por favor espera...")
-        
+         
         headers = {'User-Agent': 'Mozilla/5.0'}
         respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
         if respuesta.status_code != 200:
@@ -791,7 +791,7 @@ def cmd_resumen(message):
                     continue
 
                 nombre_loteria = limpiar_texto(nombre_loteria)
-                
+                 
                 for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
                     if sigla in nombre_loteria.upper() or nombre_loteria.upper() == sigla:
                         nombre_loteria = nombre_largo
@@ -810,7 +810,7 @@ def cmd_resumen(message):
                 for slot in slots_sorteo:
                     try:
                         texto_slot = slot.get_text(" ", strip=True).upper()
-                        
+                         
                         match_h = re.search(r'\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b', texto_slot)
                         if not match_h:
                             continue
@@ -864,7 +864,7 @@ def loop_bot():
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
     schedule.every().day.at("06:45").do(enviar_regalos_diarios)
     schedule.every().day.at("07:00").do(enviar_saludo_matutino)
-    
+     
     schedule.every().day.at("08:15").do(enviar_estudio_8am)
     schedule.every().day.at("12:15").do(enviar_estudio_mediodia)
     schedule.every().day.at("16:15").do(enviar_estudio_tarde)
@@ -872,42 +872,30 @@ def loop_bot():
     schedule.every().day.at("06:30").do(enviar_tasa_dolar)
     schedule.every().day.at("18:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
-    
+     
     schedule.every().hour.at(":10").do(lambda: enviar_tabla_tanda(1))
     schedule.every().hour.at(":20").do(lambda: enviar_tabla_tanda(2))
     schedule.every().hour.at(":40").do(lambda: enviar_tabla_tanda(3))
     
-    schedule.every(1).minute.do(verificar_minuto)
+    schedule.every(1).minutes.do(verificar_y_enviar_resultados_individuales)
+    schedule.every(1).minutes.do(verificar_minuto)
 
     while True:
-        try:
-            schedule.run_pending()
-            verificar_y_enviar_resultados_individuales()
-        except Exception as e:
-            print(f"Error en loop principal: {e}")
-        time.sleep(30)
+        schedule.run_pending()
+        time.sleep(1)
 
-def iniciar_polling_bot():
-    while True:
-        try:
-            bot.infinity_polling(skip_pending=True, interval=3, timeout=20)
-        except Exception as e:
-            print(f"⚠️ Error en polling de Telegram: {e}")
-            traceback.print_exc()
-            time.sleep(5)
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
+if __name__ == "__main__":
+    t_bot = Thread(target=loop_bot)
+    t_bot.daemon = True
+    t_bot.start()
+     
     try:
-        t_schedule = Thread(target=loop_bot)
-        t_schedule.daemon = True
-        t_schedule.start()
-
-        t_bot = Thread(target=iniciar_polling_bot)
-        t_bot.daemon = True
-        t_bot.start()
-        print("✅ Hilos de la Agencia FyD inicializados correctamente.")
+        bot.remove_webhook()
+        t_polling = Thread(target=lambda: bot.infinity_polling(skip_pending=True, interval=3, timeout=20))
+        t_polling.daemon = True
+        t_polling.start()
     except Exception as e:
-        print(f"⚠️ Error al iniciar hilos: {e}")
+        print(f"Error iniciando polling: {e}")
 
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
