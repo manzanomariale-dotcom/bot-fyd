@@ -148,6 +148,17 @@ def test_sorteo():
 def test_cierre():
     enviar_mensaje_cierre()
     return "Prueba de Cierre de Jornada ejecutada."
+    
+@app.route('/test/forzar')
+def test_forzar():
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CANAL,
+        "text": "🚨 PRUEBA DIRECTA: Si lees esto, el bot tiene acceso total y perfecto al canal.",
+        "parse_mode": "Markdown"
+    }
+    r = requests.post(url, json=payload)
+    return f"Respuesta de Telegram: {r.status_code} - {r.text}"
 
 @app.route('/test/tabla1_fake')
 def test_tabla1_fake():
