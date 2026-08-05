@@ -39,6 +39,10 @@ URL_BCV = 'https://www.bcv.org.ve/'
 
 # Archivo local para control de registros persistentes y evitar duplicados
 ARCH_REGISTRO = "resultados_enviados.json"
+ARCH_TABLAS_REGISTRO = "tablas_enviadas.json"
+
+# Memoria en ejecución para construir las tablas a partir de los resultados individuales
+MEMORIA_TABLAS = {}
 
 # Pool completo de animalitos para los análisis automáticos
 ANIMALES_POOL = [
@@ -52,7 +56,7 @@ ANIMALES_POOL = [
     "35 - Jirafa", "36 - Culebra"
 ]
 
-# Diccionario de abreviaturas oficiales solicitadas
+# Diccionario de abreviaturas oficiales solicitadas para resultados individuales
 TRADUCCION_LOTERIAS = {
     "L.A": "LOTTO ACTIVO",
     "GRJ": "GRANJITA",
@@ -79,7 +83,7 @@ app = Flask('')
 @app.route('/')
 def home():
     return (
-        f"¡El bot de resultados individuales de la <b>Agencia FyD</b> está activo en el canal {CANAL}!<br><br>"
+        f"¡El bot de resultados individuales y tablas de la <b>Agencia FyD</b> está activo en el canal {CANAL}!<br><br>"
         "<b>Enlaces de prueba rápida (Test):</b><br>"
         "👉 <a href='/test/madrugada'>Probar Saludo de Madrugada</a><br>"
         "👉 <a href='/test/piramide'>Probar Pirámide Numérica</a><br>"
@@ -90,7 +94,8 @@ def home():
         "👉 <a href='/test/estudio_tarde'>Probar Análisis de la Tarde</a><br>"
         "👉 <a href='/test/bcv'>Probar Tasa Oficial BCV</a><br>"
         "👉 <a href='/test/sorteo'>Probar Cierre de Sorteo (Min 25/55)</a><br>"
-        "👉 <a href='/test/cierre'>Probar Cierre de Jornada (8:00 PM)</a>"
+        "👉 <a href='/test/cierre'>Probar Cierre de Jornada (8:00 PM)</a><br>"
+        "👉 <a href='/test/tabla1_fake'>Probar Tabla 1 Fake (Orden de Prioridad)</a>"
     )
 
 # --- RUTAS DE PRUEBA MANUAL (TESTS) ---
@@ -143,6 +148,23 @@ def test_sorteo():
 def test_cierre():
     enviar_mensaje_cierre()
     return "Prueba de Cierre de Jornada ejecutada."
+
+@app.route('/test/tabla1_fake')
+def test_tabla1_fake():
+    MEMORIA_TABLAS.clear()
+
+    MEMORIA_TABLAS["08:00 AM"] = {
+        "LOTTO REAL": "05 - LEÓN",
+        "OTRA LOTERIA": "12 - CABALLO",
+        "SELVA PLUS": "20 - COCHINO",
+        "GUACHARO ACTIVO": "10 - TIGRE",
+        "LOTTO ACTIVO": "15 - ZORRO",
+        "LA GRANJITA": "36 - CULEBRA"
+    }
+
+    enviar_tabla_tanda(1)
+
+    return "Prueba de Tabla 1 con orden de prioridad ejecutada."
 
 def limpiar_texto(texto):
     return " ".join(texto.split())
@@ -315,7 +337,7 @@ def enviar_estudio_tarde():
         "🎯 *AGENCIA FyD* 🎯\n"
         "_Trabajamos para tí_\n\n"
         "🌇 *ANÁLISIS Y CIERRE DE LA TARDE* 🌇\n\n"
-        "¡A pocas horas de terminar la jornada! Evaluando el comportamiento de los últimos sorteos y filtrando los ganadores del día, la casa trae los animales con mayor probabilidad de reventar para asegurar el cierre:\n\n"
+        "¡A pocas horas de terminar la jornada! Evaluando el comportamiento de los últimos sortos y filtrando los ganadores del día, la casa trae los animales con mayor probabilidad de reventar para asegurar el cierre:\n\n"
         f"⚡️ *Imparables de la Tarde / Cierre:* `{analisis[0]}` y `{analisis[1]}`\n\n"
         "📲 *WHATSAPP:* 04249611372\n"
         f"{ENLACE_CANAL}"
@@ -390,6 +412,227 @@ def guardar_registros(enviados_set):
     except Exception as e:
         print(f"Error al guardar registros: {e}")
 
+def cargar_tablas_registros():
+    if os.path.exists(ARCH_TABLAS_REGISTRO):
+        try:
+            with open(ARCH_TABLAS_REGISTRO, "r") as f:
+                data = json.load(f)
+                if data.get("fecha") == datetime.now().strftime("%d-%m-%Y"):
+                    return set(data.get("enviados", []))
+        except Exception:
+            pass
+    return set()
+
+def guardar_tablas_registros(enviados_set):
+    data = {
+        "fecha": datetime.now().strftime("%d-%m-%Y"),
+        "enviados": list(enviados_set)
+    }
+    try:
+        with open(ARCH_TABLAS_REGISTRO, "w") as f:
+            json.dump(data, f)
+    except Exception as e:
+        print(f"Error al guardar registros de tablas: {e}")
+
+# ==========================================
+# NUEVO SISTEMA DE TABLAS DINÁMICAS POR TANDAS
+# ==========================================
+MAPA_ABREVIATURAS = {
+    "LA GRANJITA": "GRAJ",
+    "LOTTO ACTIVO": "L.ACT",
+    "SELVA PLUS": "SELV",
+    "GUACHARO ACTIVO": "G.ARO",
+    "LOTTO CHAIMA": "CHAIM",
+    "MONJE MILLONARIO": "MONJE",
+    "LOTO ANIMAL": "L.ANIM",
+    "LOTTO PANTHER": "L.PANT",
+    "LOTTO REAL": "L.REAL",
+    "LOTTO RD": "L.RD",
+    "CENTENA ANIMAL": "CEN.A",
+    "MEGA ANIMAL": "MEGA",
+    "RULETA PERÚ": "R.PER",
+    "RULETA COLOMBIA": "R.COL",
+    "RULETA VENEZUELA": "R.VEN",
+    "CÓNDOR": "COND",
+    "FRUTICA": "FRUI",
+    "TRÓPICA": "TROP",
+    "GRANJA MILLONARIA": "G.MIL",
+    "ZOOLÓGICO": "ZOOL",
+    "LOTTO MAX": "L.MAX"
+}
+
+EMOJIS_ANIMALES_FIJOS = {
+    "00": "🐋", "0": "🐋",
+    "01": "🐏", "1": "🐏",
+    "02": "🐂", "2": "🐂",
+    "03": "🐛", "3": "🐛",
+    "04": "🦂", "4": "🦂",
+    "05": "🦁", "5": "🦁",
+    "06": "🐸", "6": "🐸",
+    "07": "🦜", "7": "🦜",
+    "08": "🐭", "8": "🐭",
+    "09": "🦅", "9": "🦅",
+    "10": "🐯",
+    "11": "🐱",
+    "12": "🐴",
+    "13": "🐵",
+    "14": "🕊️",
+    "15": "🦊",
+    "16": "🐻",
+    "17": "🦃",
+    "18": "🫏",
+    "19": "🐐",
+    "20": "🐖",
+    "21": "🐓",
+    "22": "🐪",
+    "23": "🦓",
+    "24": "🦎",
+    "25": "🐔",
+    "26": "🐮",
+    "27": "🐶",
+    "28": "🦅",
+    "29": "🐘",
+    "30": "🐊",
+    "31": "🐾",
+    "32": "🐿️",
+    "33": "🐟",
+    "34": "🦌",
+    "35": "🦒",
+    "36": "🐍"
+}
+
+ORDEN_TABLA_1 = [
+    "LOTTO ACTIVO",
+    "LA GRANJITA",
+    "SELVA PLUS",
+    "GUACHARO ACTIVO",
+    "LOTTO REAL"
+]
+
+def obtener_abreviatura_dinamica(nombre_loteria):
+    nombre_upper = limpiar_texto(nombre_loteria.upper())
+    if nombre_upper in MAPA_ABREVIATURAS:
+        return MAPA_ABREVIATURAS[nombre_upper]
+    
+    palabras = [p for p in nombre_upper.split() if p not in ["DE", "DEL", "LA", "EL", "LOS", "LAS"]]
+    if not palabras:
+        return nombre_upper[:4]
+    if len(palabras) == 1:
+        return palabras[0][:4]
+    else:
+        sigla = "".join([w[0] for w in palabras])
+        if len(sigla) >= 3:
+            return sigla[:4]
+        return palabras[0][:3] + "." + palabras[1][0]
+
+def formatear_celda_tabla(res_str):
+    res_str = limpiar_texto(res_str.upper())
+    if res_str == "FALSE" or "FALSE" in res_str:
+        return "....🚫"
+    if "PENDIENTE" in res_str or not res_str:
+        return "....🚫"
+    
+    match = re.search(r'(\d{1,2})\s*-\s*([A-ZÁÉÍÓÚÑ]+)', res_str)
+    if match:
+        num_raw = match.group(1)
+        num_fmt = f"{int(num_raw):02d}" if num_raw.isdigit() else num_raw
+        emoji = EMOJIS_ANIMALES_FIJOS.get(num_fmt, "🐾")
+        return f"{num_fmt}{emoji}"
+    
+    match_num = re.search(r'(\d{1,2})', res_str)
+    if match_num:
+        num_raw = match_num.group(1)
+        num_fmt = f"{int(num_raw):02d}" if num_raw.isdigit() else num_raw
+        emoji = EMOJIS_ANIMALES_FIJOS.get(num_fmt, "🐾")
+        return f"{num_fmt}{emoji}"
+        
+    return "....🚫"
+
+def enviar_tabla_tanda(tipo_tanda):
+    try:
+        if not MEMORIA_TABLAS:
+            return
+
+        horas_filtradas = []
+        for h in MEMORIA_TABLAS.keys():
+            try:
+                minuto_str = h.split(":")[1][:2]
+                minuto_val = int(minuto_str)
+                if tipo_tanda == 1 and 0 <= minuto_val <= 10:
+                    horas_filtradas.append(h)
+                elif tipo_tanda == 2 and 11 <= minuto_val <= 20:
+                    horas_filtradas.append(h)
+                elif tipo_tanda == 3 and 30 <= minuto_val <= 40:
+                    horas_filtradas.append(h)
+            except Exception:
+                continue
+
+        if not horas_filtradas:
+            return
+
+        def ordenar_hora(h_str):
+            try:
+                return datetime.strptime(h_str.replace(" ", ""), "%I:%M%p")
+            except Exception:
+                return datetime.min
+
+        horas_filtradas.sort(key=ordenar_hora)
+
+        loterias_en_tanda = []
+        for h in horas_filtradas:
+            for lot in MEMORIA_TABLAS.get(h, {}).keys():
+                if lot not in loterias_en_tanda:
+                    loterias_en_tanda.append(lot)
+
+        if not loterias_en_tanda:
+            return
+
+        # Orden especial solo para la primera tabla
+        if tipo_tanda == 1:
+            prioridad = []
+
+            for lot in ORDEN_TABLA_1:
+                for encontrada in loterias_en_tanda:
+                    if lot in encontrada.upper():
+                        prioridad.append(encontrada)
+                        break
+
+            for lot in loterias_en_tanda:
+                if lot not in prioridad:
+                    prioridad.append(lot)
+
+            loterias_en_tanda = prioridad
+
+        enviadas_hoy = cargar_tablas_registros()
+        
+        cuerpo = "📰 RESULTADOS ANIMALITOS 📰\n"
+        cabecera = "HO_RA"
+        for lot in loterias_en_tanda:
+            abrev = obtener_abreviatura_dinamica(lot)
+            cabecera += f" 🎰{abrev}"
+        cuerpo += f"{cabecera}\n"
+
+        for h in horas_filtradas:
+            hora_corta = h[:5]
+            fila = f"⏰{hora_corta}"
+            for lot in loterias_en_tanda:
+                res = MEMORIA_TABLAS.get(h, {}).get(lot, "....🚫")
+                celda = formatear_celda_tabla(res)
+                fila += f" {celda}"
+            cuerpo += f"{fila}\n"
+
+        texto_final = cuerpo.strip()
+        
+        clave_tabla_id = f"tanda_{tipo_tanda}_" + "_".join([h.replace(" ", "") for h in horas_filtradas])
+
+        if clave_tabla_id not in enviadas_hoy:
+            enviar_telegram(texto_final)
+            enviadas_hoy.add(clave_tabla_id)
+            guardar_tablas_registros(enviadas_hoy)
+
+    except Exception as e:
+        print(f"Error al enviar tabla tanda {tipo_tanda}: {e}")
+
 def verificar_y_enviar_resultados_individuales():
     enviados_hoy = cargar_registros()
     es_primera_ejecucion = len(enviados_hoy) == 0
@@ -427,14 +670,16 @@ def verificar_y_enviar_resultados_individuales():
             if not nombre_loteria or len(nombre_loteria) > 40:
                 continue
 
-            nombre_loteria = limpiar_texto(nombre_loteria)
-            
+            nombre_loteria_limpio = limpiar_texto(nombre_loteria)
+            loteria_key = nombre_loteria_limpio
+
+            nombre_loteria_ind = nombre_loteria_limpio
             for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
-                if sigla in nombre_loteria.upper() or nombre_loteria.upper() == sigla:
-                    nombre_loteria = nombre_largo
+                if sigla in nombre_loteria_limpio.upper() or nombre_loteria_limpio.upper() == sigla:
+                    nombre_loteria_ind = nombre_largo
                     break
 
-            if "RULETA ROYAL" in nombre_loteria.upper() or "RESULTADOS" in nombre_loteria.upper():
+            if "RULETA ROYAL" in nombre_loteria_limpio.upper() or "RESULTADOS" in nombre_loteria_limpio.upper():
                 continue
 
             slots_sorteo = tarjeta.find_all(['div', 'li', 'span', 'tr'], class_=re.compile(r'item|slot|draw|row|col', re.IGNORECASE))
@@ -457,7 +702,11 @@ def verificar_y_enviar_resultados_individuales():
 
                 resultado = limpiar_texto(match_res.group(1)).upper()
                 
-                id_resultado = f"{nombre_loteria}_{hora}_{resultado}"
+                if hora not in MEMORIA_TABLAS:
+                    MEMORIA_TABLAS[hora] = {}
+                MEMORIA_TABLAS[hora][loteria_key] = resultado
+
+                id_resultado = f"{nombre_loteria_ind}_{hora}_{resultado}"
 
                 if es_primera_ejecucion:
                     nuevos_para_guardar.add(id_resultado)
@@ -467,7 +716,7 @@ def verificar_y_enviar_resultados_individuales():
                     hora_actual_str = datetime.now().strftime("%I:%M %p")
                     mensaje = HEADER_FyD.format(
                         hora_str=hora_actual_str,
-                        nombre_loteria=nombre_loteria,
+                        nombre_loteria=nombre_loteria_ind,
                         hora=hora,
                         resultado=resultado
                     )
@@ -490,8 +739,6 @@ def verificar_minuto():
     global ultimo_aviso_minuto
     ahora = datetime.now()
     
-    # RESTRICCIÓN: Solo enviar aviso de cierre si la hora actual es menor o igual a las 7:55 PM (19:55)
-    # Si pasa de las 7:55 PM, no se envía más este aviso automático.
     if ahora.hour > 19 or (ahora.hour == 19 and ahora.minute > 55):
         return
 
@@ -613,20 +860,22 @@ def cmd_resumen(message):
         bot.reply_to(message, f"⚠️ Error técnico: {str(e)}")
 
 def loop_bot():
-    # Programación de rutinas matutinas y análisis del día
     schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
     schedule.every().day.at("06:45").do(enviar_regalos_diarios)
     schedule.every().day.at("07:00").do(enviar_saludo_matutino)
     
-    # Análisis y regalitos automáticos leídos en vivo de los resultados del día
-    schedule.every().day.at("08:15").do(enviar_estudio_8am)       # Tras ver los resultados de las 8 AM
-    schedule.every().day.at("12:15").do(enviar_estudio_mediodia)  # Mitad de jornada (con tripleta)
-    schedule.every().day.at("16:15").do(enviar_estudio_tarde)     # Cierre de tarde (sin tripleta)
+    schedule.every().day.at("08:15").do(enviar_estudio_8am)
+    schedule.every().day.at("12:15").do(enviar_estudio_mediodia)
+    schedule.every().day.at("16:15").do(enviar_estudio_tarde)
 
     schedule.every().day.at("06:30").do(enviar_tasa_dolar)
     schedule.every().day.at("18:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
+    
+    schedule.every().hour.at(":10").do(lambda: enviar_tabla_tanda(1))
+    schedule.every().hour.at(":20").do(lambda: enviar_tabla_tanda(2))
+    schedule.every().hour.at(":40").do(lambda: enviar_tabla_tanda(3))
     
     schedule.every(1).minute.do(verificar_minuto)
 
