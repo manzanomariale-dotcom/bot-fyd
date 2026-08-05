@@ -148,7 +148,7 @@ def test_sorteo():
 def test_cierre():
     enviar_mensaje_cierre()
     return "Prueba de Cierre de Jornada ejecutada."
-    
+
 @app.route('/test/forzar')
 def test_forzar():
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -164,7 +164,6 @@ def test_forzar():
 def test_tabla1_fake():
     MEMORIA_TABLAS.clear()
 
-    # Borramos el archivo de registro de tablas para forzar el envío limpio
     if os.path.exists(ARCH_TABLAS_REGISTRO):
         try:
             os.remove(ARCH_TABLAS_REGISTRO)
@@ -183,7 +182,7 @@ def test_tabla1_fake():
     enviar_tabla_tanda(1)
 
     return "¡Tabla 1 enviada a Telegram con éxito!"
-    
+
 def limpiar_texto(texto):
     return " ".join(texto.split())
 
@@ -605,48 +604,46 @@ def enviar_tabla_tanda(tipo_tanda):
         if not loterias_en_tanda:
             return
 
-        # Orden especial solo para la primera tabla
         if tipo_tanda == 1:
             prioridad = []
-
             for lot in ORDEN_TABLA_1:
                 for encontrada in loterias_en_tanda:
                     if lot in encontrada.upper():
                         prioridad.append(encontrada)
                         break
-
             for lot in loterias_en_tanda:
                 if lot not in prioridad:
                     prioridad.append(lot)
-
             loterias_en_tanda = prioridad
 
         enviadas_hoy = cargar_tablas_registros()
          
-        cuerpo = "📰 RESULTADOS ANIMALITOS 📰\n"
-        cabecera = "HO_RA"
+        cuerpo = "📰 RESULTADOS ANIMALITOS 📰\n<code>HO_RA"
         for lot in loterias_en_tanda:
             abrev = obtener_abreviatura_dinamica(lot)
-            cabecera += f" 🎰{abrev}"
-        cuerpo += f"{cabecera}\n"
+            cuerpo += f" 🎰{abrev}"
+        cuerpo += "</code>\n"
 
         for h in horas_filtradas:
             hora_corta = h[:5]
-            fila = f"⏰{hora_corta}"
+            fila = f"<code>⏰{hora_corta}"
             for lot in loterias_en_tanda:
                 res = MEMORIA_TABLAS.get(h, {}).get(lot, "....🚫")
                 celda = formatear_celda_tabla(res)
                 fila += f" {celda}"
-            cuerpo += f"{fila}\n"
+            cuerpo += f"{fila}</code>\n"
 
         texto_final = cuerpo.strip()
-         
-        clave_tabla_id = f"tanda_{tipo_tanda}_" + "_".join([h.replace(" ", "") for h in horas_filtradas])
-
-        if clave_tabla_id not in enviadas_hoy:
-            enviar_telegram(texto_final)
-            enviadas_hoy.add(clave_tabla_id)
-            guardar_tablas_registros(enviadas_hoy)
+        
+        url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+        payload = {
+            "chat_id": CANAL, 
+            "text": texto_final, 
+            "parse_mode": "HTML", 
+            "disable_web_page_preview": True
+        }
+        resp = requests.post(url, json=payload, timeout=10)
+        print(f"Respuesta Telegram Tabla: {resp.status_code} - {resp.text}")
 
     except Exception as e:
         print(f"Error al enviar tabla tanda {tipo_tanda}: {e}")
@@ -767,9 +764,6 @@ def verificar_minuto():
             enviar_aviso_cierre_sorteo()
             ultimo_aviso_minuto = clave_tiempo
 
-# ==========================================
-# COMANDOS /resumen Y /tabla (FORMATO LIMPIO DIRECTO)
-# ==========================================
 @bot.message_handler(commands=['resumen', 'tabla'])
 def cmd_resumen(message):
     try:
