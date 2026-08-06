@@ -410,7 +410,6 @@ def generar_imagen_piramide():
     # Pie de página y contacto (ajustado al nuevo límite)
     footer_y = 955
     draw.text((img_width // 2, footer_y), "WHATSAPP: 04249611372", fill=color_dorado_claro, anchor="mm", font=font_sub)
-    draw.text((img_width // 2, footer_y + 40), ENLACE_CANAL, fill=color_morado, anchor="mm", font=font_sub)
 
     # Guardar en memoria BytesIO
     bio = BytesIO()
@@ -902,9 +901,8 @@ def loop_bot():
     schedule.every().day.at("08:15").do(enviar_estudio_8am)
     schedule.every().day.at("12:15").do(enviar_estudio_mediodia)
     schedule.every().day.at("16:15").do(enviar_estudio_tarde)
-
-    schedule.every().day.at("06:30").do(enviar_tasa_dolar)
-    schedule.every().day.at("18:30").do(enviar_tasa_dolar)
+    
+    schedule.every().day.at("15:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
     
     # Horarios programados para los mensajes automáticos intermedios
@@ -913,7 +911,7 @@ def loop_bot():
     schedule.every().day.at("11:30").do(enviar_mensaje_automatico)
     schedule.every().day.at("13:30").do(enviar_mensaje_automatico)
     schedule.every().day.at("14:30").do(enviar_mensaje_automatico)
-    schedule.every().day.at("15:30").do(enviar_mensaje_automatico)
+    schedule.every().day.at("15:40").do(enviar_mensaje_automatico)
     schedule.every().day.at("17:30").do(enviar_mensaje_automatico)
     schedule.every().day.at("19:30").do(enviar_mensaje_automatico)
     
