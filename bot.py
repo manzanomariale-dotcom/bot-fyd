@@ -95,7 +95,8 @@ def home():
         "👉 <a href='/test/bcv'>Probar Tasa Oficial BCV</a><br>"
         "👉 <a href='/test/sorteo'>Probar Cierre de Sorteo (Min 25/55)</a><br>"
         "👉 <a href='/test/cierre'>Probar Cierre de Jornada (8:00 PM)</a><br>"
-        "👉 <a href='/test/tabla1_fake'>Probar Tabla 1 Fake (Orden de Prioridad)</a>"
+        "👉 <a href='/test/tabla1_fake'>Probar Tabla 1 Fake (Orden de Prioridad)</a><br>"
+        "👉 <a href='/test/llenar_memoria'>Probar Llenar Memoria para /diaria</a>"
     )
 
 # --- RUTAS DE PRUEBA MANUAL (TESTS) ---
@@ -176,7 +177,7 @@ def test_llenar_memoria():
         "GUACHARO ACTIVO": "25 - GALLINA"
     }
     return "¡Memoria de prueba llenada con éxito! Ya puedes enviar /diaria en Telegram."
-    
+
 def limpiar_texto(texto):
     return " ".join(texto.split())
 
@@ -885,8 +886,10 @@ def cmd_resumen(message):
 @bot.message_handler(commands=['diaria', 'todo'])
 def cmd_tabla_diaria(message):
     try:
+        bot.reply_to(message, "🔄 Procesando la tabla consolidada del día, por favor espera un momento...")
+
         if not MEMORIA_TABLAS:
-            bot.reply_to(message, "⚠️ Todavía no hay resultados en memoria para armar la tabla del día.")
+            bot.send_message(message.chat.id, "⚠️ Todavía no hay resultados en memoria para armar la tabla del día. (Recuerda que puedes usar la ruta /test/llenar_memoria para pruebas).")
             return
 
         horas_filtradas = list(MEMORIA_TABLAS.keys())
@@ -914,7 +917,7 @@ def cmd_tabla_diaria(message):
                 horas_validas_unicas.append(h)
 
         if not loterias_en_dia or not horas_validas_unicas:
-            bot.reply_to(message, "⚠️ No hay resultados válidos de animalitos registrados todavía.")
+            bot.send_message(message.chat.id, "⚠️ No hay resultados válidos de animalitos registrados todavía en la memoria.")
             return
 
         prioridad = []
