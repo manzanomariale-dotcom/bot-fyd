@@ -21,6 +21,8 @@ import random
 import json
 import telebot
 import traceback
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 
 # Desactivar advertencias de certificados SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -124,7 +126,7 @@ def home():
         f"¡El bot de resultados individuales de la <b>Agencia FyD</b> está activo en el canal {CANAL}!<br><br>"
         "<b>Enlaces de prueba rápida (Test):</b><br>"
         "👉 <a href='/test/madrugada'>Probar Saludo de Madrugada</a><br>"
-        "👉 <a href='/test/piramide'>Probar Pirámide Numérica</a><br>"
+        "👉 <a href='/test/piramide'>Probar Pirámide Numérica (Imagen)</a><br>"
         "👉 <a href='/test/regalos'>Probar Regalos del Día</a><br>"
         "👉 <a href='/test/saludo'>Probar Saludo Matutino</a><br>"
         "👉 <a href='/test/estudio_manana'>Probar Análisis de las 8 AM</a><br>"
@@ -146,7 +148,7 @@ def test_madrugada():
 @app.route('/test/piramide')
 def test_piramide():
     enviar_piramide_diaria()
-    return "Prueba de Pirámide Numérica ejecutada."
+    return "Prueba de Pirámide Numérica en Imagen ejecutada."
 
 @app.route('/test/regalos')
 def test_regalos():
@@ -195,8 +197,11 @@ def test_combinacion():
 
 @app.route('/test/resumen_repetidos')
 def test_resumen_repetidos():
+    CONTEO_ANIMALES_HOY["17 - PAVO"] = 4
+    CONTEO_ANIMALES_HOY["31 - LAPA"] = 3
+    CONTEO_ANIMALES_HOY["08 - RATÓN"] = 2
     enviar_resumen_repetidos_dia()
-    return "Prueba de Resumen de Repetidos ejecutada."
+    return "Prueba de Resumen de Repetidos ejecutada y enviada a Telegram."
 
 @app.route('/test/forzar')
 def test_forzar():
@@ -234,10 +239,7 @@ def limpiar_recomendaciones_diarias():
 
 def enviar_resumen_repetidos_dia():
     if not CONTEO_ANIMALES_HOY:
-        # Si no hay datos recolectados todavía para la prueba, llenamos unos de ejemplo
-        CONTEO_ANIMALES_HOY["17 - PAVO"] = 4
-        CONTEO_ANIMALES_HOY["31 - LAPA"] = 3
-        CONTEO_ANIMALES_HOY["08 - RATÓN"] = 2
+        return
 
     frecuencias_ordenadas = sorted(list(set(CONTEO_ANIMALES_HOY.values())), reverse=True)
     
@@ -281,7 +283,7 @@ def enviar_saludo_madrugada():
         disable_web_preview=True
     )
 
-def generar_piramide():
+def generar_imagen_piramide():
     ahora = datetime.now()
     fecha_str = ahora.strftime("%d/%m/%Y")
     digitos = [int(c) for c in fecha_str if c.isdigit()]
@@ -290,17 +292,9 @@ def generar_piramide():
         actual = filas[-1]
         siguiente = [(actual[i] + actual[i+1]) % 10 for i in range(len(actual) - 1)]
         filas.append(siguiente)
-     
-    lineas_formateadas = []
-    for i, f in enumerate(filas):
-        nums_str = "  ".join(str(d) for d in f)
-        dots_count = 3 + (i * 2)
-        lineas_formateadas.append(f"{'.' * dots_count}  {nums_str}  {'.' * dots_count}")
-     
-    cuerpo_piramide = "\n".join(lineas_formateadas)
+
     seed_val = int(ahora.strftime("%Y%m%d"))
     rnd = random.Random(seed_val)
-     
     candidates = []
     for f in filas:
         for idx in range(len(f) - 1):
@@ -311,35 +305,83 @@ def generar_piramide():
             val = (num * 7) % 37
             candidates.append(f"{val:02d}" if val != 0 else "0")
             candidates.append("00")
-             
+
     unique_candidates = []
     for c in candidates:
         if c not in unique_candidates:
             unique_candidates.append(c)
-             
+
     while len(unique_candidates) < 6:
         r_val = rnd.randint(0, 36)
         c_rand = f"{r_val:02d}" if r_val != 0 else ("0" if rnd.random() > 0.5 else "00")
         if c_rand not in unique_candidates:
             unique_candidates.append(c_rand)
-             
+
     d1 = f"{unique_candidates[0]}-{unique_candidates[1]}-{unique_candidates[2]}"
     d2 = f"{unique_candidates[3]}-{unique_candidates[4]}-{unique_candidates[5]}"
-     
-    return (
-        "AGENCIA FyD\n"
-        "_Trabajamos para tí_\n"
-        "📢 REPORTE TÁCTICO - LA PIRÁMIDE 📢\n\n"
-        f"📅 Fecha: {fecha_str}\n\n"
-        f"{cuerpo_piramide}\n\n"
-        "🔥 DATOS CLAVES PARA HOY:\n"
-        f"📌 {d1}\n"
-        f"📌 {d2}\n\n"
-        "WHATSAPP: 04249611372"
-    )
+
+    # Configuración de la imagen (Ancho x Alto)
+    img_width, img_height = 800, 1100
+    image = Image.new("RGB", (img_width, img_height), color=(15, 23, 42))  # Fondo azul oscuro elegante
+    draw = ImageDraw.Draw(image)
+
+    # Fuentes por defecto del sistema
+    try:
+        font_title = ImageFont.truetype("arialbd.ttf", 32)
+        font_sub = ImageFont.truetype("arial.ttf", 20)
+        font_pir = ImageFont.truetype("arialbd.ttf", 26)
+        font_data = ImageFont.truetype("arialbd.ttf", 28)
+    except:
+        font_title = font_sub = font_pir = font_data = ImageFont.load_default()
+
+    # Cabecera
+    draw.text((img_width // 2, 40), "🎯 AGENCIA FyD 🎯", fill=(255, 215, 0), anchor="mm", font=font_title)
+    draw.text((img_width // 2, 85), "Trabajamos para tí", fill=(203, 213, 225), anchor="mm", font=font_sub)
+    draw.text((img_width // 2, 130), f"📢 REPORTE TÁCTICO - LA PIRÁMIDE 📢", fill=(255, 255, 255), anchor="mm", font=font_title)
+    draw.text((img_width // 2, 175), f"📅 Fecha: {fecha_str}", fill=(148, 163, 184), anchor="mm", font=font_sub)
+
+    # Dibujar la pirámide centrada
+    start_y = 230
+    line_height = 40
+    for i, f in enumerate(filas):
+        nums_str = "   ".join(str(d) for d in f)
+        draw.text((img_width // 2, start_y + (i * line_height)), nums_str, fill=(56, 189, 248), anchor="mm", font=font_pir)
+
+    # Caja de datos claves
+    box_top = start_y + (len(filas) * line_height) + 30
+    draw.rectangle([100, box_top, img_width - 100, box_top + 180], fill=(30, 41, 59), outline=(56, 189, 248), width=2)
+    
+    draw.text((img_width // 2, box_top + 30), "🔥 DATOS CLAVES PARA HOY:", fill=(255, 215, 0), anchor="mm", font=font_sub)
+    draw.text((img_width // 2, box_top + 80), f"📌 {d1}", fill=(255, 255, 255), anchor="mm", font=font_data)
+    draw.text((img_width // 2, box_top + 130), f"📌 {d2}", fill=(255, 255, 255), anchor="mm", font=font_data)
+
+    # Pie de página
+    footer_y = box_top + 230
+    draw.text((img_width // 2, footer_y), "WHATSAPP: 04249611372", fill=(203, 213, 225), anchor="mm", font=font_sub)
+    draw.text((img_width // 2, footer_y + 45), ENLACE_CANAL, fill=(56, 189, 248), anchor="mm", font=font_sub)
+
+    # Guardar en memoria BytesIO
+    bio = BytesIO()
+    bio.name = 'piramide_fyd.png'
+    image.save(bio, 'PNG')
+    bio.seek(0)
+    return bio
 
 def enviar_piramide_diaria():
-    enviar_telegram(generar_piramide(), disable_web_preview=True)
+    try:
+        foto_bio = generar_imagen_piramide()
+        url = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
+        files = {'photo': foto_bio}
+        data = {
+            'chat_id': CANAL,
+            'caption': f"📢 *REPORTE TÁCTICO - LA PIRÁMIDE*\n\nWHATSAPP: 04249611372\n{ENLACE_CANAL}",
+            'parse_mode': 'Markdown'
+        }
+        response = requests.post(url, data=data, files=files, timeout=15)
+        if response.status_code != 200:
+            print(f"⚠️ Error al enviar imagen de pirámide: {response.text}")
+    except Exception as e:
+        print(f"Error generando/enviando imagen pirámide: {e}")
 
 def enviar_regalos_diarios():
     ahora = datetime.now()
@@ -627,7 +669,6 @@ def verificar_y_enviar_resultados_individuales():
 
                 resultado = limpiar_texto(match_res.group(1)).upper()
 
-                # Conteo automático de todos los resultados detectados en el día
                 CONTEO_ANIMALES_HOY[resultado] = CONTEO_ANIMALES_HOY.get(resultado, 0) + 1
 
                 numero = resultado.split("-")[0].strip().zfill(2)
@@ -797,7 +838,6 @@ def cmd_resumen(message):
         bot.reply_to(message, f"⚠️ Error técnico: {str(e)}")
 
 def loop_bot():
-    schedule.every().day.at("06:50").do(enviar_saludo_madrugada)
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
     schedule.every().day.at("06:45").do(enviar_regalos_diarios)
     schedule.every().day.at("07:00").do(enviar_saludo_matutino)
@@ -805,8 +845,9 @@ def loop_bot():
     schedule.every().day.at("08:15").do(enviar_estudio_8am)
     schedule.every().day.at("12:15").do(enviar_estudio_mediodia)
     schedule.every().day.at("16:15").do(enviar_estudio_tarde)
-    
-    schedule.every().day.at("15:30").do(enviar_tasa_dolar)
+
+    schedule.every().day.at("06:30").do(enviar_tasa_dolar)
+    schedule.every().day.at("18:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
     
     # Horarios programados para los mensajes automáticos intermedios
