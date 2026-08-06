@@ -320,45 +320,45 @@ def generar_imagen_piramide():
     d1 = f"{unique_candidates[0]}-{unique_candidates[1]}-{unique_candidates[2]}"
     d2 = f"{unique_candidates[3]}-{unique_candidates[4]}-{unique_candidates[5]}"
 
-    # Configuración de la imagen (Ancho x Alto)
-    img_width, img_height = 800, 1100
+    # Lienzo compacto y proporcionado (Ancho x Alto)
+    img_width, img_height = 800, 750
     image = Image.new("RGB", (img_width, img_height), color=(15, 23, 42))  # Fondo azul oscuro elegante
     draw = ImageDraw.Draw(image)
 
-    # Fuentes por defecto del sistema
+    # Fuentes más grandes y proporcionadas
     try:
-        font_title = ImageFont.truetype("arialbd.ttf", 32)
-        font_sub = ImageFont.truetype("arial.ttf", 20)
-        font_pir = ImageFont.truetype("arialbd.ttf", 26)
-        font_data = ImageFont.truetype("arialbd.ttf", 28)
+        font_title = ImageFont.truetype("arialbd.ttf", 36)
+        font_sub = ImageFont.truetype("arial.ttf", 22)
+        font_pir = ImageFont.truetype("arialbd.ttf", 30)
+        font_data = ImageFont.truetype("arialbd.ttf", 32)
     except:
         font_title = font_sub = font_pir = font_data = ImageFont.load_default()
 
-    # Cabecera
-    draw.text((img_width // 2, 40), "🎯 AGENCIA FyD 🎯", fill=(255, 215, 0), anchor="mm", font=font_title)
-    draw.text((img_width // 2, 85), "Trabajamos para tí", fill=(203, 213, 225), anchor="mm", font=font_sub)
-    draw.text((img_width // 2, 130), f"📢 REPORTE TÁCTICO - LA PIRÁMIDE 📢", fill=(255, 255, 255), anchor="mm", font=font_title)
-    draw.text((img_width // 2, 175), f"📅 Fecha: {fecha_str}", fill=(148, 163, 184), anchor="mm", font=font_sub)
+    # Cabecera compacta
+    draw.text((img_width // 2, 35), "🎯 AGENCIA FyD 🎯", fill=(255, 215, 0), anchor="mm", font=font_title)
+    draw.text((img_width // 2, 75), "Trabajamos para tí", fill=(203, 213, 225), anchor="mm", font=font_sub)
+    draw.text((img_width // 2, 115), "📢 REPORTE TÁCTICO - LA PIRÁMIDE", fill=(255, 255, 255), anchor="mm", font=font_title)
+    draw.text((img_width // 2, 155), f"📅 Fecha: {fecha_str}", fill=(148, 163, 184), anchor="mm", font=font_sub)
 
-    # Dibujar la pirámide centrada
-    start_y = 230
-    line_height = 40
+    # Dibujar la pirámide centrada con mejor separación
+    start_y = 205
+    line_height = 42
     for i, f in enumerate(filas):
-        nums_str = "   ".join(str(d) for d in f)
+        nums_str = "    ".join(str(d) for d in f)
         draw.text((img_width // 2, start_y + (i * line_height)), nums_str, fill=(56, 189, 248), anchor="mm", font=font_pir)
 
-    # Caja de datos claves
-    box_top = start_y + (len(filas) * line_height) + 30
-    draw.rectangle([100, box_top, img_width - 100, box_top + 180], fill=(30, 41, 59), outline=(56, 189, 248), width=2)
+    # Caja de datos claves compacta y destacada
+    box_top = start_y + (len(filas) * line_height) + 20
+    draw.rectangle([80, box_top, img_width - 80, box_top + 140], fill=(30, 41, 59), outline=(56, 189, 248), width=3)
     
-    draw.text((img_width // 2, box_top + 30), "🔥 DATOS CLAVES PARA HOY:", fill=(255, 215, 0), anchor="mm", font=font_sub)
-    draw.text((img_width // 2, box_top + 80), f"📌 {d1}", fill=(255, 255, 255), anchor="mm", font=font_data)
-    draw.text((img_width // 2, box_top + 130), f"📌 {d2}", fill=(255, 255, 255), anchor="mm", font=font_data)
+    draw.text((img_width // 2, box_top + 25), "🔥 DATOS CLAVES PARA HOY:", fill=(255, 215, 0), anchor="mm", font=font_sub)
+    draw.text((img_width // 2, box_top + 65), f"📌 {d1}", fill=(255, 255, 255), anchor="mm", font=font_data)
+    draw.text((img_width // 2, box_top + 105), f"📌 {d2}", fill=(255, 255, 255), anchor="mm", font=font_data)
 
     # Pie de página
-    footer_y = box_top + 230
+    footer_y = box_top + 175
     draw.text((img_width // 2, footer_y), "WHATSAPP: 04249611372", fill=(203, 213, 225), anchor="mm", font=font_sub)
-    draw.text((img_width // 2, footer_y + 45), ENLACE_CANAL, fill=(56, 189, 248), anchor="mm", font=font_sub)
+    draw.text((img_width // 2, footer_y + 35), ENLACE_CANAL, fill=(56, 189, 248), anchor="mm", font=font_sub)
 
     # Guardar en memoria BytesIO
     bio = BytesIO()
