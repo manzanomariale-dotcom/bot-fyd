@@ -320,45 +320,52 @@ def generar_imagen_piramide():
     d1 = f"{unique_candidates[0]}-{unique_candidates[1]}-{unique_candidates[2]}"
     d2 = f"{unique_candidates[3]}-{unique_candidates[4]}-{unique_candidates[5]}"
 
-    # Lienzo compacto y proporcionado (Ancho x Alto)
-    img_width, img_height = 800, 750
-    image = Image.new("RGB", (img_width, img_height), color=(15, 23, 42))  # Fondo azul oscuro elegante
+    # Configuración de la imagen (Casino Premium: Fondo Negro y Dorado)
+    img_width, img_height = 800, 950
+    image = Image.new("RGB", (img_width, img_height), color=(10, 10, 10))  # Fondo negro elegante
     draw = ImageDraw.Draw(image)
 
-    # Fuentes más grandes y proporcionadas
+    # Fuentes compatibles con Linux (Render)
+    color_dorado = (212, 175, 55)
+    color_dorado_claro = (243, 229, 149)
+    color_blanco = (255, 255, 255)
+    color_gris = (180, 180, 180)
+
     try:
-        font_title = ImageFont.truetype("arialbd.ttf", 36)
-        font_sub = ImageFont.truetype("arial.ttf", 22)
-        font_pir = ImageFont.truetype("arialbd.ttf", 30)
-        font_data = ImageFont.truetype("arialbd.ttf", 32)
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 34)
+        font_sub = ImageFont.truetype("DejaVuSans.ttf", 22)
+        font_pir = ImageFont.truetype("DejaVuSans-Bold.ttf", 26)
+        font_data = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
     except:
         font_title = font_sub = font_pir = font_data = ImageFont.load_default()
 
-    # Cabecera compacta
-    draw.text((img_width // 2, 35), "🎯 AGENCIA FyD 🎯", fill=(255, 215, 0), anchor="mm", font=font_title)
-    draw.text((img_width // 2, 75), "Trabajamos para tí", fill=(203, 213, 225), anchor="mm", font=font_sub)
-    draw.text((img_width // 2, 115), "📢 REPORTE TÁCTICO - LA PIRÁMIDE", fill=(255, 255, 255), anchor="mm", font=font_title)
-    draw.text((img_width // 2, 155), f"📅 Fecha: {fecha_str}", fill=(148, 163, 184), anchor="mm", font=font_sub)
+    # Encabezado estilo Casino
+    draw.text((img_width // 2, 45), "AGENCIA FyD", fill=color_dorado, anchor="mm", font=font_title)
+    draw.text((img_width // 2, 85), "Trabajamos para tí", fill=color_gris, anchor="mm", font=font_sub)
+    draw.text((img_width // 2, 130), "📢 REPORTE TÁCTICO - LA PIRÁMIDE 📢", fill=color_dorado_claro, anchor="mm", font=font_title)
+    draw.text((img_width // 2, 175), f"📅 Fecha: {fecha_str}", fill=color_blanco, anchor="mm", font=font_sub)
 
-    # Dibujar la pirámide centrada con mejor separación
-    start_y = 205
-    line_height = 42
+    # Dibujar la pirámide centrada con espacios simétricos exactos
+    start_y = 230
+    line_height = 36
     for i, f in enumerate(filas):
-        nums_str = "    ".join(str(d) for d in f)
-        draw.text((img_width // 2, start_y + (i * line_height)), nums_str, fill=(56, 189, 248), anchor="mm", font=font_pir)
+        nums_str = "   ".join(str(d) for d in f)
+        sangria = "  " * i
+        linea_final = sangria + nums_str
+        draw.text((img_width // 2, start_y + (i * line_height)), linea_final, fill=color_dorado, anchor="mm", font=font_pir)
 
-    # Caja de datos claves compacta y destacada
-    box_top = start_y + (len(filas) * line_height) + 20
-    draw.rectangle([80, box_top, img_width - 80, box_top + 140], fill=(30, 41, 59), outline=(56, 189, 248), width=3)
+    # Caja de datos claves (Estilo Casino con bordes dorados)
+    box_top = start_y + (len(filas) * line_height) + 25
+    draw.rectangle([80, box_top, img_width - 80, box_top + 160], fill=(20, 20, 20), outline=color_dorado, width=2)
     
-    draw.text((img_width // 2, box_top + 25), "🔥 DATOS CLAVES PARA HOY:", fill=(255, 215, 0), anchor="mm", font=font_sub)
-    draw.text((img_width // 2, box_top + 65), f"📌 {d1}", fill=(255, 255, 255), anchor="mm", font=font_data)
-    draw.text((img_width // 2, box_top + 105), f"📌 {d2}", fill=(255, 255, 255), anchor="mm", font=font_data)
+    draw.text((img_width // 2, box_top + 25), "🔥 DATOS CLAVES PARA HOY:", fill=color_dorado, anchor="mm", font=font_sub)
+    draw.text((img_width // 2, box_top + 75), f"📌 {d1}", fill=color_blanco, anchor="mm", font=font_data)
+    draw.text((img_width // 2, box_top + 120), f"📌 {d2}", fill=color_blanco, anchor="mm", font=font_data)
 
     # Pie de página
-    footer_y = box_top + 175
-    draw.text((img_width // 2, footer_y), "WHATSAPP: 04249611372", fill=(203, 213, 225), anchor="mm", font=font_sub)
-    draw.text((img_width // 2, footer_y + 35), ENLACE_CANAL, fill=(56, 189, 248), anchor="mm", font=font_sub)
+    footer_y = box_top + 210
+    draw.text((img_width // 2, footer_y), "📲 WHATSAPP: 04249611372", fill=color_dorado_claro, anchor="mm", font=font_sub)
+    draw.text((img_width // 2, footer_y + 40), ENLACE_CANAL, fill=color_gris, anchor="mm", font=font_sub)
 
     # Guardar en memoria BytesIO
     bio = BytesIO()
