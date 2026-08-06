@@ -617,28 +617,38 @@ def enviar_tabla_tanda(tipo_tanda):
             loterias_en_tanda = prioridad
 
         enviadas_hoy = cargar_tablas_registros()
-         
-        cuerpo = "📰 RESULTADOS ANIMALITOS 📰\n<code>HO_RA"
-        for lot in loterias_en_tanda:
-            abrev = obtener_abreviatura_dinamica(lot)
-            cuerpo += f" 🎰{abrev}"
-        cuerpo += "</code>\n"
-
-        for h in horas_filtradas:
-            hora_corta = h[:5]
-            fila = f"<code>⏰{hora_corta}"
-            for lot in loterias_en_tanda:
-                res = MEMORIA_TABLAS.get(h, {}).get(lot, "....🚫")
-                celda = formatear_celda_tabla(res)
-                fila += f" {celda}"
-            cuerpo += f"{fila}</code>\n"
-
-        texto_final = cuerpo.strip()
         
+        # Dividir las loterías en bloques de máximo 4 por línea para que no se amuñune
+        TAMANO_BLOQUE = 4
+        bloques_loterias = [loterias_en_tanda[i:i + TAMANO_BLOQUE] for i in range(0, len(loterias_en_tanda), TAMANO_BLOQUE)]
+
+        texto_final = "📰 <b>RESULTADOS ANIMALITOS</b> 📰\n"
+
+        for idx, bloque in enumerate(bloques_loterias):
+            texto_final += f"\n📋 <b>Bloque {idx + 1}</b>:\n"
+            cabecera = "<code>HO_RA"
+            for lot in bloque:
+                abrev = obtener_abreviatura_dinamica(lot)
+                cabecera += f"  🎰{abrev}"
+            cabecera += "</code>\n"
+            texto_final += cabecera
+
+            for h in horas_filtradas:
+                hora_corta = h[:5]
+                fila = f"<code>⏰{hora_corta}"
+                for lot in bloque:
+                    res = MEMORIA_TABLAS.get(h, {}).get(lot, "....🚫")
+                    celda = formatear_celda_tabla(res)
+                    fila += f"  {celda}"
+                fila += "</code>\n"
+                texto_final += fila
+
+        texto_final += f"\n📲 <b>WHATSAPP:</b> 04249611372\n{ENLACE_CANAL}"
+
         url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
         payload = {
             "chat_id": CANAL, 
-            "text": texto_final, 
+            "text": texto_final.strip(), 
             "parse_mode": "HTML", 
             "disable_web_page_preview": True
         }
