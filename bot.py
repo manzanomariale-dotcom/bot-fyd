@@ -46,7 +46,7 @@ MEMORIA_TABLAS = {}
 
 # Pool completo de animalitos para los análisis automáticos
 ANIMALES_POOL = [
-    "00 - Delfín", "01 - Carnero", "02 - Toro", "03 - Ciempiés", "04 - Alacrán", 
+    "00 - Ballena", "0- Delfin","01 - Carnero", "02 - Toro", "03 - Ciempiés", "04 - Alacrán", 
     "05 - León", "06 - Rana", "07 - Perico", "08 - Ratón", "09 - Águila", 
     "10 - Tigre", "11 - Gato", "12 - Caballo", "13 - Mono", "14 - Paloma", 
     "15 - Zorro", "16 - Oso", "17 - Pavo", "18 - Burro", "19 - Chivo", 
@@ -160,29 +160,23 @@ def test_forzar():
     r = requests.post(url, json=payload)
     return f"Respuesta de Telegram: {r.status_code} - {r.text}"
 
-@app.route('/test/tabla1_fake')
-def test_tabla1_fake():
+@app.route('/test/llenar_memoria')
+def test_llenar_memoria():
     MEMORIA_TABLAS.clear()
-
-    if os.path.exists(ARCH_TABLAS_REGISTRO):
-        try:
-            os.remove(ARCH_TABLAS_REGISTRO)
-        except Exception:
-            pass
-
     MEMORIA_TABLAS["08:00 AM"] = {
-        "LOTTO REAL": "05 - LEÓN",
-        "OTRA LOTERIA": "12 - CABALLO",
-        "SELVA PLUS": "20 - COCHINO",
-        "GUACHARO ACTIVO": "10 - TIGRE",
         "LOTTO ACTIVO": "15 - ZORRO",
-        "LA GRANJITA": "36 - CULEBRA"
+        "LA GRANJITA": "36 - CULEBRA",
+        "SELVA PLUS": "20 - COCHINO",
+        "GUACHARO ACTIVO": "10 - TIGRE"
     }
-
-    enviar_tabla_tanda(1)
-
-    return "¡Tabla 1 enviada a Telegram con éxito!"
-
+    MEMORIA_TABLAS["09:00 AM"] = {
+        "LOTTO ACTIVO": "05 - LEÓN",
+        "LA GRANJITA": "12 - CABALLO",
+        "SELVA PLUS": "01 - CARNERO",
+        "GUACHARO ACTIVO": "25 - GALLINA"
+    }
+    return "¡Memoria de prueba llenada con éxito! Ya puedes enviar /diaria en Telegram."
+    
 def limpiar_texto(texto):
     return " ".join(texto.split())
 
