@@ -320,8 +320,8 @@ def generar_imagen_piramide():
     d1 = f"{unique_candidates[0]}-{unique_candidates[1]}-{unique_candidates[2]}"
     d2 = f"{unique_candidates[3]}-{unique_candidates[4]}-{unique_candidates[5]}"
 
-    # Estilo Casino Deluxe con Fondo Rojo Vino y Paneles Morados (Ancho x Alto)
-    img_width, img_height = 1000, 1250
+    # Altura optimizada y recortada a 1120 para eliminar el espacio vacío inferior
+    img_width, img_height = 1000, 1120
     image = Image.new("RGB", (img_width, img_height), color=(30, 10, 10))  # Fondo rojo vino elegante
     draw = ImageDraw.Draw(image)
 
@@ -354,8 +354,9 @@ def generar_imagen_piramide():
     draw.text((img_width // 2, 212), f"📅  {fecha_str}", fill=color_dorado_claro, anchor="mm", font=font_data)
 
     # Paneles Laterales de Estadísticas / Sumas por Fila (Estilo Casino)
+    panel_bottom = 740
     # Panel Izquierdo (Datos generales)
-    draw.rectangle([40, 290, 280, 750], fill=color_panel, outline=color_morado, width=2)
+    draw.rectangle([40, 290, 280, panel_bottom], fill=color_panel, outline=color_morado, width=2)
     draw.text((160, 315), "★ DATOS ★", fill=color_dorado, anchor="mm", font=font_data)
     draw.text((160, 355), "NÚMEROS USADOS", fill=color_blanco, anchor="mm", font=font_sub)
     draw.text((160, 390), f"{len(set([d for f in filas for d in f])) * 4}", fill=color_dorado_claro, anchor="mm", font=font_data)
@@ -365,11 +366,11 @@ def generar_imagen_piramide():
     draw.text((160, 560), f"{max([max(f) for f in filas])}", fill=color_dorado_claro, anchor="mm", font=font_data)
     draw.text((160, 610), "NÚMERO MENOR", fill=color_blanco, anchor="mm", font=font_sub)
     draw.text((160, 645), f"{min([min(f) for f in filas])}", fill=color_dorado_claro, anchor="mm", font=font_data)
-    draw.text((160, 695), "NÚMERO MÁS FRECUENTE", fill=color_blanco, anchor="mm", font=font_sub)
+    draw.text((160, 695), "NÚMERO FRECUENTE", fill=color_blanco, anchor="mm", font=font_sub)
     draw.text((160, 730), f"{digitos[0]} (7 VECES)", fill=color_dorado_claro, anchor="mm", font=font_data)
 
     # Panel Derecho (Suma por Fila)
-    draw.rectangle([720, 290, 960, 750], fill=color_panel, outline=color_morado, width=2)
+    draw.rectangle([720, 290, 960, panel_bottom], fill=color_panel, outline=color_morado, width=2)
     draw.text((840, 315), "★ SUMA ★", fill=color_dorado, anchor="mm", font=font_data)
     draw.text((840, 350), "POR FILA", fill=color_dorado, anchor="mm", font=font_data)
     
@@ -377,37 +378,37 @@ def generar_imagen_piramide():
     for idx, f in enumerate(filas):
         suma_fila = sum(f)
         draw.text((840, y_suma_pos), f"{idx+1}RA FILA: {suma_fila}", fill=color_blanco, anchor="mm", font=font_sub)
-        y_suma_pos += 42
+        y_suma_pos += 40
 
     # Dibujar la Pirámide Central con Círculos Dorados estilo Fichas de Casino
     start_y = 280
-    row_height = 56
+    row_height = 54
     center_x = img_width // 2
-    circle_radius = 24
+    circle_radius = 23
 
     for i, f in enumerate(filas):
         num_items = len(f)
-        total_width = num_items * 55
+        total_width = num_items * 52
         start_x_row = center_x - (total_width // 2)
 
         for j, num in enumerate(f):
-            cx = start_x_row + (j * 55) + 25
-            cy = start_y + (i * row_height) + 25
+            cx = start_x_row + (j * 52) + 24
+            cy = start_y + (i * row_height) + 24
             
             # Círculo externo dorado (efecto ficha)
             draw.ellipse([cx - circle_radius, cy - circle_radius, cx + circle_radius, cy + circle_radius], fill=color_panel, outline=color_dorado, width=3)
             # Número dentro del círculo
             draw.text((cx, cy), str(num), fill=color_blanco, anchor="mm", font=font_pir)
 
-    # Caja inferior de Datos Claves
-    box_top = 800
-    draw.rectangle([150, box_top, img_width - 150, box_top + 160], fill=color_panel, outline=color_dorado, width=2)
-    draw.text((img_width // 2, box_top + 30), "🔥 DATOS CLAVES PARA HOY:", fill=color_dorado, anchor="mm", font=font_sub)
-    draw.text((img_width // 2, box_top + 80), f"📌 {d1}", fill=color_blanco, anchor="mm", font=font_data)
-    draw.text((img_width // 2, box_top + 125), f"📌 {d2}", fill=color_blanco, anchor="mm", font=font_data)
+    # Caja inferior de Datos Claves (subida para aprovechar el espacio)
+    box_top = 760
+    draw.rectangle([150, box_top, img_width - 150, box_top + 150], fill=color_panel, outline=color_dorado, width=2)
+    draw.text((img_width // 2, box_top + 28), "🔥 DATOS CLAVES PARA HOY:", fill=color_dorado, anchor="mm", font=font_sub)
+    draw.text((img_width // 2, box_top + 75), f"📌 {d1}", fill=color_blanco, anchor="mm", font=font_data)
+    draw.text((img_width // 2, box_top + 115), f"📌 {d2}", fill=color_blanco, anchor="mm", font=font_data)
 
-    # Pie de página y contacto
-    footer_y = box_top + 200
+    # Pie de página y contacto (ajustado al nuevo límite)
+    footer_y = 955
     draw.text((img_width // 2, footer_y), "WHATSAPP: 04249611372", fill=color_dorado_claro, anchor="mm", font=font_sub)
     draw.text((img_width // 2, footer_y + 40), ENLACE_CANAL, fill=color_morado, anchor="mm", font=font_sub)
 
