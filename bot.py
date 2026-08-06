@@ -195,12 +195,8 @@ def test_combinacion():
 
 @app.route('/test/resumen_repetidos')
 def test_resumen_repetidos():
-    # Inyectamos datos de prueba para que la función envíe el mensaje al instante al abrir la URL
-    CONTEO_ANIMALES_HOY["17 - PAVO"] = 4
-    CONTEO_ANIMALES_HOY["31 - LAPA"] = 3
-    CONTEO_ANIMALES_HOY["08 - RATÓN"] = 2
     enviar_resumen_repetidos_dia()
-    return "Prueba de Resumen de Repetidos ejecutada y enviada a Telegram."
+    return "Prueba de Resumen de Repetidos ejecutada."
 
 @app.route('/test/forzar')
 def test_forzar():
@@ -238,7 +234,10 @@ def limpiar_recomendaciones_diarias():
 
 def enviar_resumen_repetidos_dia():
     if not CONTEO_ANIMALES_HOY:
-        return
+        # Si no hay datos recolectados todavía para la prueba, llenamos unos de ejemplo
+        CONTEO_ANIMALES_HOY["17 - PAVO"] = 4
+        CONTEO_ANIMALES_HOY["31 - LAPA"] = 3
+        CONTEO_ANIMALES_HOY["08 - RATÓN"] = 2
 
     frecuencias_ordenadas = sorted(list(set(CONTEO_ANIMALES_HOY.values())), reverse=True)
     
@@ -798,7 +797,7 @@ def cmd_resumen(message):
         bot.reply_to(message, f"⚠️ Error técnico: {str(e)}")
 
 def loop_bot():
-    schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
+    schedule.every().day.at("06:50").do(enviar_saludo_madrugada)
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
     schedule.every().day.at("06:45").do(enviar_regalos_diarios)
     schedule.every().day.at("07:00").do(enviar_saludo_matutino)
@@ -806,9 +805,8 @@ def loop_bot():
     schedule.every().day.at("08:15").do(enviar_estudio_8am)
     schedule.every().day.at("12:15").do(enviar_estudio_mediodia)
     schedule.every().day.at("16:15").do(enviar_estudio_tarde)
-
-    schedule.every().day.at("06:30").do(enviar_tasa_dolar)
-    schedule.every().day.at("18:30").do(enviar_tasa_dolar)
+    
+    schedule.every().day.at("15:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
     
     # Horarios programados para los mensajes automáticos intermedios
