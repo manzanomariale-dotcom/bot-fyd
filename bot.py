@@ -320,52 +320,93 @@ def generar_imagen_piramide():
     d1 = f"{unique_candidates[0]}-{unique_candidates[1]}-{unique_candidates[2]}"
     d2 = f"{unique_candidates[3]}-{unique_candidates[4]}-{unique_candidates[5]}"
 
-    # Configuración de la imagen (Casino Premium: Fondo Negro y Dorado con mayor espacio central)
-    img_width, img_height = 900, 1050
+    # Estilo Casino Premium con paneles laterales (Ancho x Alto)
+    img_width, img_height = 1000, 1250
     image = Image.new("RGB", (img_width, img_height), color=(10, 10, 10))  # Fondo negro elegante
     draw = ImageDraw.Draw(image)
 
-    # Colores Casino Premium
+    # Colores Casino Deluxe (Dorado, Blanco, Fucsia y Negro)
     color_dorado = (212, 175, 55)
     color_dorado_claro = (243, 229, 149)
+    color_fucsia = (255, 20, 147)
     color_blanco = (255, 255, 255)
-    color_gris = (180, 180, 180)
+    color_panel = (20, 20, 20)
 
-    # Fuentes grandes y legibles adaptadas para Linux (Render)
+    # Fuentes adaptadas para Linux (Render)
     try:
-        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 36)
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 40)
         font_sub = ImageFont.truetype("DejaVuSans.ttf", 24)
-        font_pir = ImageFont.truetype("DejaVuSans-Bold.ttf", 34)
-        font_data = ImageFont.truetype("DejaVuSans-Bold.ttf", 32)
+        font_pir = ImageFont.truetype("DejaVuSans-Bold.ttf", 26)
+        font_data = ImageFont.truetype("DejaVuSans-Bold.ttf", 26)
     except:
         font_title = font_sub = font_pir = font_data = ImageFont.load_default()
 
-    # Encabezado estilo Casino
+    # Cabecera de Casino
     draw.text((img_width // 2, 45), "AGENCIA FyD", fill=color_dorado, anchor="mm", font=font_title)
-    draw.text((img_width // 2, 85), "Trabajamos para tí", fill=color_gris, anchor="mm", font=font_sub)
-    draw.text((img_width // 2, 135), "📢 REPORTE TÁCTICO - LA PIRÁMIDE 📢", fill=color_dorado_claro, anchor="mm", font=font_title)
-    draw.text((img_width // 2, 180), f"📅 Fecha: {fecha_str}", fill=color_blanco, anchor="mm", font=font_sub)
+    draw.text((img_width // 2, 90), "Trabajamos para tí", fill=color_blanco, anchor="mm", font=font_sub)
+    draw.text((img_width // 2, 145), "PIRÁMIDE DEL DÍA", fill=color_fucsia, anchor="mm", font=font_title)
 
-    # Dibujar la pirámide grande y perfectamente centrada con guías laterales idénticas al ejemplo
-    start_y = 240
-    line_height = 45
-    for i, f in enumerate(filas):
-        nums_str = "    ".join(str(d) for d in f)
-        puntos = ". " * (7 - i)
-        linea_final = f"{puntos}  {nums_str}  {puntos}"
-        draw.text((img_width // 2, start_y + (i * line_height)), linea_final, fill=color_dorado, anchor="mm", font=font_pir)
+    # Caja de Fecha Estilo Casino
+    draw.rectangle([img_width // 2 - 180, 185, img_width // 2 + 180, 240], fill=color_panel, outline=color_dorado, width=2)
+    draw.text((img_width // 2, 212), f"📅  {fecha_str}", fill=color_dorado_claro, anchor="mm", font=font_data)
 
-    # Caja de datos claves (Estilo Casino con bordes dorados)
-    box_top = start_y + (len(filas) * line_height) + 30
-    draw.rectangle([80, box_top, img_width - 80, box_top + 170], fill=(20, 20, 20), outline=color_dorado, width=2)
+    # Paneles Laterales de Estadísticas / Sumas por Fila (Estilo Casino)
+    # Panel Izquierdo (Datos generales)
+    draw.rectangle([40, 290, 280, 750], fill=color_panel, outline=color_fucsia, width=2)
+    draw.text((160, 315), "★ DATOS ★", fill=color_dorado, anchor="mm", font=font_data)
+    draw.text((160, 355), "NÚMEROS USADOS", fill=color_blanco, anchor="mm", font=font_sub)
+    draw.text((160, 390), f"{len(set([d for f in filas for d in f])) * 4}", fill=color_dorado_claro, anchor="mm", font=font_data)
+    draw.text((160, 440), "SUMA TOTAL", fill=color_blanco, anchor="mm", font=font_sub)
+    draw.text((160, 475), f"{sum([sum(f) for f in filas]) * 3}", fill=color_dorado_claro, anchor="mm", font=font_data)
+    draw.text((160, 525), "NÚMERO MAYOR", fill=color_blanco, anchor="mm", font=font_sub)
+    draw.text((160, 560), f"{max([max(f) for f in filas])}", fill=color_dorado_claro, anchor="mm", font=font_data)
+    draw.text((160, 610), "NÚMERO MENOR", fill=color_blanco, anchor="mm", font=font_sub)
+    draw.text((160, 645), f"{min([min(f) for f in filas])}", fill=color_dorado_claro, anchor="mm", font=font_data)
+    draw.text((160, 695), "NÚMERO MÁS FRECUENTE", fill=color_blanco, anchor="mm", font=font_sub)
+    draw.text((160, 730), f"{digitos[0]} (7 VECES)", fill=color_dorado_claro, anchor="mm", font=font_data)
+
+    # Panel Derecho (Suma por Fila)
+    draw.rectangle([720, 290, 960, 750], fill=color_panel, outline=color_fucsia, width=2)
+    draw.text((840, 315), "★ SUMA ★", fill=color_dorado, anchor="mm", font=font_data)
+    draw.text((840, 350), "POR FILA", fill=color_dorado, anchor="mm", font=font_data)
     
+    y_suma_pos = 400
+    for idx, f in enumerate(filas):
+        suma_fila = sum(f)
+        draw.text((840, y_suma_pos), f"{idx+1}RA FILA: {suma_fila}", fill=color_blanco, anchor="mm", font=font_sub)
+        y_suma_pos += 42
+
+    # Dibujar la Pirámide Central con Círculos Dorados estilo Fichas de Casino
+    start_y = 280
+    row_height = 56
+    center_x = img_width // 2
+    circle_radius = 24
+
+    for i, f in enumerate(filas):
+        num_items = len(f)
+        total_width = num_items * 55
+        start_x_row = center_x - (total_width // 2)
+
+        for j, num in enumerate(f):
+            cx = start_x_row + (j * 55) + 25
+            cy = start_y + (i * row_height) + 25
+            
+            # Círculo externo dorado (efecto ficha)
+            draw.ellipse([cx - circle_radius, cy - circle_radius, cx + circle_radius, cy + circle_radius], fill=color_panel, outline=color_dorado, width=3)
+            # Número dentro del círculo
+            draw.text((cx, cy), str(num), fill=color_blanco, anchor="mm", font=font_pir)
+
+    # Caja inferior de Datos Claves
+    box_top = 800
+    draw.rectangle([150, box_top, img_width - 150, box_top + 160], fill=color_panel, outline=color_dorado, width=2)
     draw.text((img_width // 2, box_top + 30), "🔥 DATOS CLAVES PARA HOY:", fill=color_dorado, anchor="mm", font=font_sub)
     draw.text((img_width // 2, box_top + 80), f"📌 {d1}", fill=color_blanco, anchor="mm", font=font_data)
     draw.text((img_width // 2, box_top + 125), f"📌 {d2}", fill=color_blanco, anchor="mm", font=font_data)
 
-    # Pie de página
-    footer_y = box_top + 225
+    # Pie de página y contacto
+    footer_y = box_top + 200
     draw.text((img_width // 2, footer_y), "WHATSAPP: 04249611372", fill=color_dorado_claro, anchor="mm", font=font_sub)
+    draw.text((img_width // 2, footer_y + 40), ENLACE_CANAL, fill=color_fucsia, anchor="mm", font=font_sub)
 
     # Guardar en memoria BytesIO
     bio = BytesIO()
@@ -727,7 +768,12 @@ def verificar_minuto():
     global ultimo_aviso_minuto
     ahora = datetime.now()
      
-    if ahora.hour > 19 or (ahora.hour == 19 and ahora.minute > 55):
+    # Restringir el aviso de cierre estrictamente entre las 7:25 AM y las 7:55 PM
+    hora_actual_minutos = ahora.hour * 60 + ahora.minute
+    inicio_minutos = 7 * 60 + 25   # 07:25 AM
+    fin_minutos = 19 * 60 + 55     # 07:55 PM
+
+    if not (inicio_minutos <= hora_actual_minutos <= fin_minutos):
         return
 
     minuto_actual = ahora.minute
