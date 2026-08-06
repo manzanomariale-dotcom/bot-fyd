@@ -597,9 +597,15 @@ def enviar_tabla_tanda(tipo_tanda):
 
         loterias_en_tanda = []
         for h in horas_filtradas:
-            for lot in MEMORIA_TABLAS.get(h, {}).keys():
-                if lot not in loterias_en_tanda:
+            for lot, res in MEMORIA_TABLAS.get(h, {}).items():
+                if lot not in loterias_en_tanda and "PENDIENTE" not in res.upper() and "....🚫" not in formatear_celda_tabla(res):
                     loterias_en_tanda.append(lot)
+
+        if not loterias_en_tanda:
+            for h in horas_filtradas:
+                for lot in MEMORIA_TABLAS.get(h, {}).keys():
+                    if lot not in loterias_en_tanda:
+                        loterias_en_tanda.append(lot)
 
         if not loterias_en_tanda:
             return
@@ -618,7 +624,6 @@ def enviar_tabla_tanda(tipo_tanda):
 
         enviadas_hoy = cargar_tablas_registros()
         
-        # Dividir las loterías en bloques de máximo 4 por línea para que no se amuñune
         TAMANO_BLOQUE = 4
         bloques_loterias = [loterias_en_tanda[i:i + TAMANO_BLOQUE] for i in range(0, len(loterias_en_tanda), TAMANO_BLOQUE)]
 
@@ -880,6 +885,79 @@ def cmd_resumen(message):
     except Exception as e:
         print(f"Error general en comando tabla: {e}")
         bot.reply_to(message, f"⚠️ Error técnico: {str(e)}")
+
+@bot.message_handler(commands=['diaria', 'todo'])
+def cmd_tabla_diaria(message):
+    try:
+        if not MEMORIA_TABLAS:
+            bot.reply_to(message, "⚠️ Todavía no hay resultados en memoria para armar la tabla del día.")
+            return
+
+        horas_filtradas = list(MEMORIA_TABLAS.keys())
+        def ordenar_hora(h_str):
+            try:
+                return datetime.strptime(h_str.replace(" ", ""), "%I:%M%p")
+            except Exception:
+                return datetime.min
+        horas_filtradas.sort(key=ordenar_hora)
+
+        loterias_en_dia = []
+        for h in horas_filtradas:
+            for lot in MEMORIA_TABLAS.get(h, {}).keys():
+                if lot not in loterias_en_dia:
+                    loterias_en_dia.append(lot)
+
+        if not loterias_en_dia:
+            bot.reply_to(message, "⚠️ No hay loterías registradas todavía.")
+            return
+
+        prioridad = []
+        for lot in ORDEN_TABLA_1:
+            for encontrada in loterias_en_dia:
+                if lot in encontrada.upper():
+                    prioridad.append(encontrada)
+                    break
+        for lot in loterias_en_dia:
+            if lot not in prioridad:
+                prioridad.append(lot)
+        loterias_en_dia = prioridad
+
+        TAMANO_BLOQUE = 4
+        bloques_loterias = [loterias_en_dia[i:i + TAMANO_BLOQUE] for i in range(0, len(loterias_en_dia), TAMANO_BLOQUE)]
+
+        fecha_hoy = datetime.now().strftime("%d/%m/%Y")
+        texto_final = f"📰 <b>RESUMEN TOTAL DEL DÍA ({fecha_hoy})</b> 📰\n"
+
+        for idx, bloque in enumerate(bloques_loterias):
+            texto_final += f"\n📋 <b>Bloque {idx + 1}</b>:\n"
+            cabecera = "<code>HO_RA"
+            for lot in bloque:
+                abrev = obtener_abreviatura_dinamica(lot)
+                cabecera += f"  🎰{abrev}"
+            cabecera += "</code>\n"
+            texto_final += cabecera
+
+            for h in horas_filtradas:
+                hora_corta = h[:5]
+                fila = f"<code>⏰{hora_corta}"
+                for lot in bloque:
+                    res = MEMORIA_TABLAS.get(h, {}).get(lot, "....🚫")
+                    celda = formatear_celda_tabla(res)
+                    fila += f"  {celda}"
+                fila += "</code>\n"
+                texto_final += fila
+
+        texto_final += f"\n📲 <b>WHATSAPP:</b> 04249611372\n{ENLACE_CANAL}"
+
+        if len(texto_final) > 4000:
+            for x in range(0, len(texto_final), 4000):
+                bot.send_message(message.chat.id, texto_final[x:x+4000], parse_mode="HTML")
+        else:
+            bot.send_message(message.chat.id, texto_final, parse_mode="HTML", disable_web_page_preview=True)
+
+    except Exception as e:
+        print(f"Error en comando diaria: {e}")
+        bot.reply_to(message, f"⚠️ Error técnico al generar la tabla del día: {e}")
 
 def loop_bot():
     schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
