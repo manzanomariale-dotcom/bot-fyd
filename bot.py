@@ -553,15 +553,17 @@ def formatear_celda_tabla(res_str):
     if match:
         num_raw = match.group(1)
         num_fmt = f"{int(num_raw):02d}" if num_raw.isdigit() else num_raw
-        emoji = EMOJIS_ANIMALES_FIJOS.get(num_fmt, "🐾")
-        return f"{num_fmt}{emoji}"
+        if 0 <= int(num_fmt) <= 36:
+            emoji = EMOJIS_ANIMALES_FIJOS.get(num_fmt, "🐾")
+            return f"{num_fmt}{emoji}"
      
     match_num = re.search(r'(\d{1,2})', res_str)
     if match_num:
         num_raw = match_num.group(1)
         num_fmt = f"{int(num_raw):02d}" if num_raw.isdigit() else num_raw
-        emoji = EMOJIS_ANIMALES_FIJOS.get(num_fmt, "🐾")
-        return f"{num_fmt}{emoji}"
+        if 0 <= int(num_fmt) <= 36:
+            emoji = EMOJIS_ANIMALES_FIJOS.get(num_fmt, "🐾")
+            return f"{num_fmt}{emoji}"
          
     return "....🚫"
 
@@ -901,14 +903,24 @@ def cmd_tabla_diaria(message):
                 return datetime.min
         horas_filtradas.sort(key=ordenar_hora)
 
+        horas_validas_unicas = []
         loterias_en_dia = []
-        for h in horas_filtradas:
-            for lot in MEMORIA_TABLAS.get(h, {}).keys():
-                if lot not in loterias_en_dia:
-                    loterias_en_dia.append(lot)
 
-        if not loterias_en_dia:
-            bot.reply_to(message, "⚠️ No hay loterías registradas todavía.")
+        for h in horas_filtradas:
+            valido = False
+            for lot, res in MEMORIA_TABLAS.get(h, {}).items():
+                if res:
+                    res_clean = limpiar_texto(res.upper())
+                    match = re.search(r'(\d{1,2})', res_clean)
+                    if match and 0 <= int(match.group(1)) <= 36:
+                        valido = True
+                        if lot not in loterias_en_dia:
+                            loterias_en_dia.append(lot)
+            if valido and h not in horas_validas_unicas:
+                horas_validas_unicas.append(h)
+
+        if not loterias_en_dia or not horas_validas_unicas:
+            bot.reply_to(message, "⚠️ No hay resultados válidos de animalitos registrados todavía.")
             return
 
         prioridad = []
@@ -937,12 +949,17 @@ def cmd_tabla_diaria(message):
             cabecera += "</code>\n"
             texto_final += cabecera
 
-            for h in horas_filtradas:
+            for h in horas_validas_unicas:
                 hora_corta = h[:5]
                 fila = f"<code>⏰{hora_corta}"
                 for lot in bloque:
-                    res = MEMORIA_TABLAS.get(h, {}).get(lot, "....🚫")
-                    celda = formatear_celda_tabla(res)
+                    res = MEMORIA_TABLAS.get(h, {}).get(lot, "")
+                    celda = "....🚫"
+                    if res:
+                        res_clean = limpiar_texto(res.upper())
+                        match = re.search(r'(\d{1,2})', res_clean)
+                        if match and 0 <= int(match.group(1)) <= 36:
+                            celda = formatear_celda_tabla(res)
                     fila += f"  {celda}"
                 fila += "</code>\n"
                 texto_final += fila
