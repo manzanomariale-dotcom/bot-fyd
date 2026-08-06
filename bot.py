@@ -798,7 +798,7 @@ def cmd_resumen(message):
         bot.reply_to(message, f"⚠️ Error técnico: {str(e)}")
 
 def loop_bot():
-    schedule.every().day.at("06:30").do(enviar_saludo_madrugada)
+    schedule.every().day.at("06:50").do(enviar_saludo_madrugada)
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
     schedule.every().day.at("06:45").do(enviar_regalos_diarios)
     schedule.every().day.at("07:00").do(enviar_saludo_matutino)
@@ -807,8 +807,7 @@ def loop_bot():
     schedule.every().day.at("12:15").do(enviar_estudio_mediodia)
     schedule.every().day.at("16:15").do(enviar_estudio_tarde)
 
-    schedule.every().day.at("06:30").do(enviar_tasa_dolar)
-    schedule.every().day.at("18:30").do(enviar_tasa_dolar)
+    schedule.every().day.at("15:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
     
     # Horarios programados para los mensajes automáticos intermedios
