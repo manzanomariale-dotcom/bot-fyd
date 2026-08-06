@@ -322,13 +322,13 @@ def generar_imagen_piramide():
 
     # Estilo Casino Premium con paneles laterales (Ancho x Alto)
     img_width, img_height = 1000, 1250
-    image = Image.new("RGB", (img_width, img_height), color=(10, 10, 10))  # Fondo negro elegante
+    image = Image.new("RGB", (img_width, img_height), color=(30, 10, 10))  # Fondo negro elegante
     draw = ImageDraw.Draw(image)
 
     # Colores Casino Deluxe (Dorado, Blanco, Fucsia y Negro)
     color_dorado = (212, 175, 55)
     color_dorado_claro = (243, 229, 149)
-    color_fucsia = (255, 20, 147)
+    color_morado = (148, 0, 211)
     color_blanco = (255, 255, 255)
     color_panel = (20, 20, 20)
 
