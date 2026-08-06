@@ -40,6 +40,48 @@ URL_BCV = 'https://www.bcv.org.ve/'
 # Archivo local para control de registros persistentes y evitar duplicados
 ARCH_REGISTRO = "resultados_enviados.json"
 
+# Variables globales para control de recomendaciones, aciertos y conteo diario de animales
+RECOMENDADOS_HOY = {}
+ACIERTOS_HOY = set()
+CONTEO_ANIMALES_HOY = {}
+
+# Variable global para evitar repetir el último mensaje automático consecutivo
+ULTIMO_INDICE_MENSAJE = -1
+
+# Pool de mensajes automáticos para mantener activo el canal (Al menos 30 mensajes)
+MENSAJES_AUTOMATICOS = [
+    f"🎯 *Agencia FyD* 🎯\n¡La suerte está de tu lado hoy! No te quedes sin jugar tu animalito favorito.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
+    f"🔥 ¡Activos con la buena energía en *Agencia FyD*! Elige tu animalito y ven a ganar con nosotros.\n📲 WhatsApp: 04249611372",
+    f"🍀 ¿Ya consultaste tu palpito para el próximo sorteo? En *Agencia FyD* te pagamos al instante.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
+    f"⚡️ ¡No dejes para última hora tus jugadas! La banca de *Agencia FyD* está lista para recibir tu tiquet ganador.\n📲 04249611372",
+    f"🌟 La constancia trae el éxito. ¡Sigue jugando tus animalitos preferidos en *Agencia FyD*!\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
+    f"🎲 ¿Cuál es tu animalito fetiche hoy? Juega seguro y cobra rápido con *Agencia FyD*.\n📲 WhatsApp: 04249611372",
+    f"🚀 ¡Arranca tu buena racha con *Agencia FyD*! Trabajamos para ti con la mejor atención.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
+    f"💡 Un buen día comienza jugando con confianza. ¡Haz tus jugadas en *Agencia FyD*!\n📲 WhatsApp: 04249611372",
+    f"🎯 ¡Atención apostadores! La pizarra de *Agencia FyD* está habilitada para que revientes la banca hoy.\n📲 04249611372\n{ENLACE_CANAL}",
+    f"✨ La suerte sonríe a los audaces. ¡Haz tu jugada ahora mismo en *Agencia FyD*!\n📲 WhatsApp: 04249611372",
+    f"🏆 ¡Conviértete en el próximo ganador del día con *Agencia FyD*!\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
+    f"🔥 ¡El momento de ganar es ahora! Consulta tus animalitos y juega con *Agencia FyD*.\n📲 WhatsApp: 04249611372",
+    f"🍀 Confía en tu instinto y sella tus animalitos favoritos en *Agencia FyD*.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
+    f"⚡️ ¡Rapidez, seguridad y confianza! Todo eso y más en *Agencia FyD*.\n📲 WhatsApp: 04249611372",
+    f"🎯 ¡No te quedes fuera de la jugada! Ven y participa con *Agencia FyD*.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
+    f"🌟 ¿Listo para acertar el próximo animalito? *Agencia FyD* te acompaña en cada sorteo.\n📲 04249611372",
+    f"🚀 ¡Sube la apuesta y gana en grande con los animalitos de *Agencia FyD*!\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
+    f"💡 Recuerda que en *Agencia FyD* trabajamos para ti todos los días.\n📲 WhatsApp: 04249611372",
+    f"🎲 ¡La emoción de los animalitos se vive mejor jugando con *Agencia FyD*!\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
+    f"✨ ¡Activa tu buena suerte hoy con *Agencia FyD*! Escríbenos al WhatsApp.\n📲 04249611372",
+    f"🔥 Los mejores datos y la mejor atención los encuentras aquí en *Agencia FyD*.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
+    f"🍀 ¡A ganar se ha dicho! Haz tus jugadas con confianza en *Agencia FyD*.\n📲 WhatsApp: 04249611372",
+    f"🎯 Mantén la mente positiva y juega tu animalito preferido en *Agencia FyD*.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
+    f"⚡️ ¡No esperes al último minuto! Sella tus animalitos con *Agencia FyD*.\n📲 WhatsApp: 04249611372",
+    f"🌟 ¡La banca de *Agencia FyD* te espera con las mejores opciones para hoy!\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
+    f"🚀 ¡Imparables! Así son las jugadas ganadoras en *Agencia FyD*.\n📲 WhatsApp: 04249611372",
+    f"💡 Comparte este canal con tus amigos y amigas para que más ganen con *Agencia FyD*.\n{ENLACE_CANAL}",
+    f"🎲 ¡La jugada perfecta está a solo un mensaje de distancia en *Agencia FyD*!\n📲 WhatsApp: 04249611372",
+    f"✨ ¡Que la suerte te acompañe en cada sorteo de hoy! Atentamente, *Agencia FyD*.\n📲 04249611372\n{ENLACE_CANAL}",
+    f"🔥 ¡Sella, gana y cobra seguro con el respaldo de *Agencia FyD*!\n📲 WhatsApp: 04249611372"
+]
+
 # Pool completo de animalitos para los análisis automáticos
 ANIMALES_POOL = [
     "00 - Ballena", "0- Delfin","01 - Carnero", "02 - Toro", "03 - Ciempiés", "04 - Alacrán", 
@@ -90,7 +132,9 @@ def home():
         "👉 <a href='/test/estudio_tarde'>Probar Análisis de la Tarde</a><br>"
         "👉 <a href='/test/bcv'>Probar Tasa Oficial BCV</a><br>"
         "👉 <a href='/test/sorteo'>Probar Cierre de Sorteo (Min 25/55)</a><br>"
-        "👉 <a href='/test/cierre'>Probar Cierre de Jornada (8:00 PM)</a>"
+        "👉 <a href='/test/cierre'>Probar Cierre de Jornada (8:00 PM)</a><br>"
+        "👉 <a href='/test/combinacion'>Probar Combinación Diaria</a><br>"
+        "👉 <a href='/test/resumen_repetidos'>Probar Resumen de Repetidos</a>"
     )
 
 # --- RUTAS DE PRUEBA MANUAL (TESTS) ---
@@ -144,6 +188,16 @@ def test_cierre():
     enviar_mensaje_cierre()
     return "Prueba de Cierre de Jornada ejecutada."
 
+@app.route('/test/combinacion')
+def test_combinacion():
+    enviar_combinacion_diaria()
+    return "Prueba de Combinación Diaria ejecutada."
+
+@app.route('/test/resumen_repetidos')
+def test_resumen_repetidos():
+    enviar_resumen_repetidos_dia()
+    return "Prueba de Resumen de Repetidos ejecutada."
+
 @app.route('/test/forzar')
 def test_forzar():
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -172,6 +226,52 @@ def enviar_telegram(mensaje, disable_web_preview=True):
             print(f"⚠️ Error al enviar al canal: {response.text}")
     except Exception as e:
         print(f"⚠️ Excepción de conexión con Telegram: {e}")
+
+def limpiar_recomendaciones_diarias():
+    RECOMENDADOS_HOY.clear()
+    ACIERTOS_HOY.clear()
+    CONTEO_ANIMALES_HOY.clear()
+
+def enviar_resumen_repetidos_dia():
+    if not CONTEO_ANIMALES_HOY:
+        return
+
+    # Encontrar el máximo de frecuencias
+    max_frecuencia = max(CONTEO_ANIMALES_HOY.values())
+    
+    # Agrupar animales por su frecuencia de mayor a menor
+    frecuencias_ordenadas = sorted(list(set(CONTEO_ANIMALES_HOY.values())), reverse=True)
+    
+    meds = ["🥇", "🥈", "🥉"]
+    texto_resumen = "🔥 *ANIMALES MÁS REPETIDOS DEL DÍA*\n\n"
+    
+    puesto = 0
+    for freq in frecuencias_ordenadas:
+        animales_con_esta_freq = [anim for anim, f in CONTEO_ANIMALES_HOY.items() if f == freq]
+        for anim in animales_con_esta_freq:
+            if puesto < len(meds):
+                medalla = meds[puesto]
+            else:
+                medalla = "▪️"
+            
+            texto_resumen += f"{medalla} {anim} ({freq} {'veces' if freq > 1 else 'vez'})\n"
+            puesto += 1
+
+    texto_resumen += f"\n📲 *WHATSAPP:* 04249611372\n{ENLACE_CANAL}"
+    enviar_telegram(texto_resumen, disable_web_preview=True)
+
+def enviar_mensaje_automatico():
+    global ULTIMO_INDICE_MENSAJE
+    if not MENSAJES_AUTOMATICOS:
+        return
+    
+    indice = random.randint(0, len(MENSAJES_AUTOMATICOS) - 1)
+    if len(MENSAJES_AUTOMATICOS) > 1:
+        while indice == ULTIMO_INDICE_MENSAJE:
+            indice = random.randint(0, len(MENSAJES_AUTOMATICOS) - 1)
+            
+    ULTIMO_INDICE_MENSAJE = indice
+    enviar_telegram(MENSAJES_AUTOMATICOS[indice], disable_web_preview=True)
 
 def enviar_saludo_madrugada():
     enviar_telegram(
@@ -249,6 +349,10 @@ def enviar_regalos_diarios():
     rnd = random.Random(seed_val)
     regalos_seleccionados = rnd.sample(ANIMALES_POOL, 3)
      
+    for animal in regalos_seleccionados:
+        numero = animal.split(" - ")[0].zfill(2)
+        RECOMENDADOS_HOY[numero] = "🎁 Regalo del Día"
+
     mensaje_regalos = (
         "🎁 *LOS REGALOS DE LA AGENCIA FyD* 🎁\n"
         "_Trabajamos para tí_\n\n"
@@ -290,8 +394,50 @@ def seleccionar_analisis_dinamico(cantidad):
     rnd = random.Random(seed_val)
     return rnd.sample(disponibles, cantidad)
 
+def enviar_combinacion_diaria():
+    salidos = obtener_animales_salidos_actuales()
+    disponibles = [a for a in ANIMALES_POOL if a.split(" - ")[0].zfill(2) not in salidos]
+    if len(disponibles) < 7:
+        disponibles = ANIMALES_POOL
+
+    seed_val = int(datetime.now().strftime("%Y%m%d%H%M%S"))
+    rnd = random.Random(seed_val)
+    seleccionados = rnd.sample(disponibles, 7)
+
+    fijo1 = seleccionados[0]
+    fijo2 = seleccionados[1]
+    par1 = seleccionados[2]
+    par2 = seleccionados[3]
+    trip1 = seleccionados[4]
+    trip2 = seleccionados[5]
+    trip3 = seleccionados[6]
+
+    for animal in seleccionados:
+        num = animal.split(" - ")[0].zfill(2)
+        RECOMENDADOS_HOY[num] = "🎯 Combinación Especial FyD"
+
+    par_str = f"{par1.split(' - ')[0]} - {par2.split(' - ')[0]}"
+    trip_str = f"{trip1.split(' - ')[0]} - {trip2.split(' - ')[0]} - {trip3.split(' - ')[0]}"
+
+    mensaje = (
+        "🎯 *COMBINACIÓN GANADORA - AGENCIA FyD* 🎯\n"
+        "_Trabajamos para tí_\n\n"
+        "🔥 ¡Datos exclusivos y directos para asegurar tus jugadas:\n\n"
+        f"📌 *Fijos del Día:* `{fijo1}` y `{fijo2}`\n"
+        f"📌 *El Par:* `{par_str}`\n"
+        f"📌 *La Tripleta:* `{trip_str}`\n\n"
+        "📲 *WHATSAPP:* 04249611372\n"
+        f"{ENLACE_CANAL}\n\n"
+        "¡A cobrar se ha dicho! 🍀✨"
+    )
+    enviar_telegram(mensaje, disable_web_preview=True)
+
 def enviar_estudio_8am():
     analisis = seleccionar_analisis_dinamico(2)
+    for animal in analisis:
+        numero = animal.split(" - ")[0].zfill(2)
+        RECOMENDADOS_HOY[numero] = "🔍 Análisis 8:15 AM"
+
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
         "_Trabajamos para tí_\n\n"
@@ -305,7 +451,15 @@ def enviar_estudio_8am():
 
 def enviar_estudio_mediodia():
     analisis = seleccionar_analisis_dinamico(2)
+    for animal in analisis:
+        numero = animal.split(" - ")[0].zfill(2)
+        RECOMENDADOS_HOY[numero] = "☀️ Análisis Mediodía"
+
     tripleta = seleccionar_analisis_dinamico(3)
+    for animal in tripleta:
+        numero = animal.split(" - ")[0].zfill(2)
+        RECOMENDADOS_HOY[numero] = "🎯 Tripleta Mediodía"
+
     t_str = f"{tripleta[0].split(' - ')[0]} - {tripleta[1].split(' - ')[0]} - {tripleta[2].split(' - ')[0]}"
      
     mensaje = (
@@ -322,6 +476,10 @@ def enviar_estudio_mediodia():
 
 def enviar_estudio_tarde():
     analisis = seleccionar_analisis_dinamico(2)
+    for animal in analisis:
+        numero = animal.split(" - ")[0].zfill(2)
+        RECOMENDADOS_HOY[numero] = "🌇 Análisis Tarde"
+
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
         "_Trabajamos para tí_\n\n"
@@ -335,7 +493,7 @@ def enviar_estudio_tarde():
 
 def enviar_saludo_matutino():
     enviar_telegram(
-        "🎯 AGENCIA FyD 🎯\n"
+        "🎯 AGENCIA FyD 🎯\n\n"
         "_Trabajamos para tí_\n\n"
         "☀️ ¡Buenos días! Arrancamos la jornada con la mejor actitud y la mejor energía para ganar.\n\n"
         "📲 WHATSAPP: 04249611372\n"
@@ -469,6 +627,25 @@ def verificar_y_enviar_resultados_individuales():
                     continue
 
                 resultado = limpiar_texto(match_res.group(1)).upper()
+
+                # Conteo automático de todos los resultados detectados en el día
+                CONTEO_ANIMALES_HOY[resultado] = CONTEO_ANIMALES_HOY.get(resultado, 0) + 1
+
+                numero = resultado.split("-")[0].strip().zfill(2)
+
+                if numero in RECOMENDADOS_HOY and numero not in ACIERTOS_HOY:
+                    mensaje = (
+                        "🎉🎉 *¡ACERTAMOS!* 🎉🎉\n\n"
+                        f"✅ {RECOMENDADOS_HOY[numero]}\n\n"
+                        f"🎯 *{resultado}*\n"
+                        f"🎲 {nombre_loteria_ind}\n"
+                        f"🕒 {hora}\n\n"
+                        "🍀 *¡Felicidades a todos los que confiaron en Agencia FyD!*"
+                    )
+
+                    enviar_telegram(mensaje)
+
+                    ACIERTOS_HOY.add(numero)
 
                 id_resultado = f"{nombre_loteria_ind}_{hora}_{resultado}"
 
@@ -633,6 +810,27 @@ def loop_bot():
     schedule.every().day.at("06:30").do(enviar_tasa_dolar)
     schedule.every().day.at("18:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
+    
+    # Horarios programados para los mensajes automáticos intermedios
+    schedule.every().day.at("09:30").do(enviar_mensaje_automatico)
+    schedule.every().day.at("10:30").do(enviar_mensaje_automatico)
+    schedule.every().day.at("11:30").do(enviar_mensaje_automatico)
+    schedule.every().day.at("13:30").do(enviar_mensaje_automatico)
+    schedule.every().day.at("14:30").do(enviar_mensaje_automatico)
+    schedule.every().day.at("15:30").do(enviar_mensaje_automatico)
+    schedule.every().day.at("17:30").do(enviar_mensaje_automatico)
+    schedule.every().day.at("19:30").do(enviar_mensaje_automatico)
+    
+    # Horario programado para las combinaciones automáticas diarias
+    schedule.every().day.at("10:00").do(enviar_combinacion_diaria)
+    schedule.every().day.at("14:00").do(enviar_combinacion_diaria)
+    schedule.every().day.at("17:00").do(enviar_combinacion_diaria)
+    
+    # Horario programado a las 7:30 PM para publicar el resumen de animales más repetidos
+    schedule.every().day.at("19:30").do(enviar_resumen_repetidos_dia)
+    
+    # Horario programado a las 12:01 AM para reiniciar las recomendaciones y conteo diario
+    schedule.every().day.at("00:01").do(limpiar_recomendaciones_diarias)
     
     schedule.every(1).minutes.do(verificar_y_enviar_resultados_individuales)
     schedule.every(1).minutes.do(verificar_minuto)
