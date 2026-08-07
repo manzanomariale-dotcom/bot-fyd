@@ -108,14 +108,12 @@ TRADUCCION_LOTERIAS = {
 }
 
 HEADER_FyD = (
-    "Resultado: *AGENCIA FyD*\n"
-    "Hora: {hora_str}\n"
-    "JUEGA AQUI\n"
+    "*AGENCIA FyD*\n"
     "RESULTADOS ANIMALITOS\n\n"
     "🎲 *{nombre_loteria}* 🎲\n"
     "Hora: {hora}\n"
     "Animalito: *{resultado}*\n\n"
-    f"{ENLACE_CANAL}"
+    "04249611372"
 )
 
 app = Flask('')
@@ -195,13 +193,6 @@ def test_combinacion():
     enviar_combinacion_diaria()
     return "Prueba de Combinación Diaria ejecutada."
 
-@app.route('/test/resumen_repetidos')
-def test_resumen_repetidos():
-    CONTEO_ANIMALES_HOY["17 - PAVO"] = 4
-    CONTEO_ANIMALES_HOY["31 - LAPA"] = 3
-    CONTEO_ANIMALES_HOY["08 - RATÓN"] = 2
-    enviar_resumen_repetidos_dia()
-    return "Prueba de Resumen de Repetidos ejecutada y enviada a Telegram."
 
 @app.route('/test/forzar')
 def test_forzar():
@@ -237,29 +228,6 @@ def limpiar_recomendaciones_diarias():
     ACIERTOS_HOY.clear()
     CONTEO_ANIMALES_HOY.clear()
 
-def enviar_resumen_repetidos_dia():
-    if not CONTEO_ANIMALES_HOY:
-        return
-
-    frecuencias_ordenadas = sorted(list(set(CONTEO_ANIMALES_HOY.values())), reverse=True)
-    
-    meds = ["🥇", "🥈", "🥉"]
-    texto_resumen = "🔥 *ANIMALES MÁS REPETIDOS DEL DÍA*\n\n"
-    
-    puesto = 0
-    for freq in frecuencias_ordenadas:
-        animales_con_esta_freq = [anim for anim, f in CONTEO_ANIMALES_HOY.items() if f == freq]
-        for anim in animales_con_esta_freq:
-            if puesto < len(meds):
-                medalla = meds[puesto]
-            else:
-                medalla = "▪️"
-            
-            texto_resumen += f"{medalla} {anim} ({freq} {'veces' if freq > 1 else 'vez'})\n"
-            puesto += 1
-
-    texto_resumen += f"\n📲 *WHATSAPP:* 04249611372\n{ENLACE_CANAL}"
-    enviar_telegram(texto_resumen, disable_web_preview=True)
 
 def enviar_mensaje_automatico():
     global ULTIMO_INDICE_MENSAJE
@@ -277,8 +245,7 @@ def enviar_mensaje_automatico():
 def enviar_saludo_madrugada():
     enviar_telegram(
         "🎯 AGENCIA FyD 🎯\n\n"
-        "_Trabajamos para tí_\n\n"
-        "🌅 ¡Despertando con la mejor energía y listos para ganar! 🌅\n"
+        "*¡Activados desde temprano! 🌟 Que este día nos traiga mucha suerte y grandes jugadas. ¡Muy buenos días! 🔥*\n"
         "WHATSAPP: 04249611372",
         disable_web_preview=True
     )
@@ -447,7 +414,6 @@ def enviar_regalos_diarios():
 
     mensaje_regalos = (
         "🎁 *LOS REGALOS DE LA AGENCIA FyD* 🎁\n"
-        "_Trabajamos para tí_\n\n"
         f"📅 Fecha: {fecha_str}\n\n"
         "¡Los fijos recomendados para reventar la banca hoy:\n\n"
         f"🌟 *1er Regalo:* {regalos_seleccionados[0]}\n"
@@ -513,7 +479,6 @@ def enviar_combinacion_diaria():
 
     mensaje = (
         "🎯 *COMBINACIÓN GANADORA - AGENCIA FyD* 🎯\n"
-        "_Trabajamos para tí_\n\n"
         "🔥 ¡Datos exclusivos y directos para asegurar tus jugadas:\n\n"
         f"📌 *Fijos del Día:* `{fijo1}` y `{fijo2}`\n"
         f"📌 *El Par:* `{par_str}`\n"
@@ -532,7 +497,6 @@ def enviar_estudio_8am():
 
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
-        "_Trabajamos para tí_\n\n"
         "🔍 *ANÁLISIS TRAS EL SORTEO DE LAS 8:00 AM* 🔍\n\n"
         "¡Ya salieron los primeros animalitos! Evaluando la apertura de la pizarra y descartando lo ya jugado, la casa trae las recomendaciones probables para los siguientes sorteos:\n\n"
         f"🔥 *Regalitos recomendados:* `{analisis[0]}` y `{analisis[1]}`\n\n"
@@ -556,9 +520,8 @@ def enviar_estudio_mediodia():
      
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
-        "_Trabajamos para tí_\n\n"
         "☀️ *ANÁLISIS DEL MEDIODÍA* ☀️\n\n"
-        "¡Mitad de jornada! Estudiando los resultados que nos dejó la mañana y analizando tendencias en vivo, el tablero apunta hacia las siguientes proyecciones:\n\n"
+        "*¡Mitad de jornada! Estudiando los resultados que nos dejó la mañana y analizando tendencias en vivo, el tablero apunta hacia las siguientes proyecciones:*\n\n"
         f"🔥 *Animales calientes:* `{analisis[0]}` y `{analisis[1]}`\n"
         f"🎯 *Tripleta recomendada:* `{t_str}`\n\n"
         "📲 *WHATSAPP:* 04249611372\n"
@@ -574,7 +537,6 @@ def enviar_estudio_tarde():
 
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
-        "_Trabajamos para tí_\n\n"
         "🌇 *ANÁLISIS Y CIERRE DE LA TARDE* 🌇\n\n"
         "¡A pocas horas de terminar la jornada! Evaluando el comportamiento de los últimos sortos y filtrando los ganadores del día, la casa trae los animales con mayor probabilidad de reventar para asegurar el cierre:\n\n"
         f"⚡️ *Imparables de la Tarde / Cierre:* `{analisis[0]}` y `{analisis[1]}`\n\n"
@@ -586,7 +548,6 @@ def enviar_estudio_tarde():
 def enviar_saludo_matutino():
     enviar_telegram(
         "🎯 AGENCIA FyD 🎯\n\n"
-        "_Trabajamos para tí_\n\n"
         "☀️ ¡Buenos días! Arrancamos la jornada con la mejor actitud y la mejor energía para ganar.\n\n"
         "📲 WHATSAPP: 04249611372\n"
         "¡Mucho éxito en tus jugadas de hoy! 🍀🔥",
@@ -615,9 +576,8 @@ def enviar_tasa_dolar():
 def enviar_mensaje_cierre():
     enviar_telegram(
         "AGENCIA FyD\n"
-        "_Trabajamos para tí_\n\n"
         "🌙 ¡FINAL DE JORNADA! 🌙\n"
-        "Cerramos nuestras puertas por el día de hoy. ¡Gracias por jugar con nosotros! Los esperamos mañana con más energía y suerte. 🍀✨",
+        "*¡Listo por hoy! 🚀 Que descansen y sueñen en grande. Mañana nos vemos tempranito con más suerte y nuevos retos. ¡Buenas noches! 🌟💤*",
         disable_web_preview=True
     )
 
@@ -916,13 +876,10 @@ def loop_bot():
     schedule.every().day.at("19:30").do(enviar_mensaje_automatico)
     
     # Horario programado para las combinaciones automáticas diarias
-    schedule.every().day.at("10:00").do(enviar_combinacion_diaria)
-    schedule.every().day.at("14:00").do(enviar_combinacion_diaria)
-    schedule.every().day.at("17:00").do(enviar_combinacion_diaria)
-    
-    # Horario programado a las 7:30 PM para publicar el resumen de animales más repetidos
-    schedule.every().day.at("19:30").do(enviar_resumen_repetidos_dia)
-    
+    schedule.every().day.at("09:40").do(enviar_combinacion_diaria)
+    schedule.every().day.at("13:30").do(enviar_combinacion_diaria)
+    schedule.every().day.at("17:30").do(enviar_combinacion_diaria)
+
     # Horario programado a las 12:01 AM para reiniciar las recomendaciones y conteo diario
     schedule.every().day.at("00:01").do(limpiar_recomendaciones_diarias)
     
