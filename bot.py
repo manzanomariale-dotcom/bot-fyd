@@ -109,7 +109,7 @@ TRADUCCION_LOTERIAS = {
 
 HEADER_FyD = (
     "*AGENCIA FyD*\n"
-    "RESULTADOS ANIMALITOS\n\n"
+    "*RESULTADOS*\n\n"
     "🎲 *{nombre_loteria}* 🎲\n"
     "Hora: {hora}\n"
     "Animalito: *{resultado}*\n\n"
