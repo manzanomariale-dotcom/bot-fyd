@@ -992,9 +992,9 @@ def loop_bot():
     schedule.every().day.at("19:30").do(enviar_mensaje_automatico)
     
     # Horarios programados para las publicidades automáticas de CASHEA (sin chocar con los mensajes importantes)
-    schedule.every().day.at("10:00").do(enviar_publicidad_cashea)
+    schedule.every().day.at("08:00").do(enviar_publicidad_cashea)
     schedule.every().day.at("14:00").do(enviar_publicidad_cashea)
-    schedule.every().day.at("18:15").do(enviar_publicidad_cashea)
+    schedule.every().day.at("16:15").do(enviar_publicidad_cashea)
 
     # Horario programado para las combinaciones automáticas diarias
     schedule.every().day.at("09:40").do(enviar_combinacion_diaria)
