@@ -192,6 +192,7 @@ def home():
         "👉 <a href='/test/cierre'>Probar Cierre de Jornada (8:00 PM)</a><br>"
         "👉 <a href='/test/combinacion'>Probar Combinación Diaria</a><br>"
         "👉 <a href='/test/resumen_repetidos'>Probar Resumen de Repetidos</a>"
+        "👉 <a href='/test/cashea'>Probar Publicidad Cashea</a><br>"
     )
 
 # --- RUTAS DE PRUEBA MANUAL (TESTS) ---
@@ -249,6 +250,11 @@ def test_cierre():
 def test_combinacion():
     enviar_combinacion_diaria()
     return "Prueba de Combinación Diaria ejecutada."
+
+@app.route('/test/cashea')
+def test_cashea():
+    enviar_publicidad_cashea()
+    return "Prueba de Cashea ejecutada."
 
 
 @app.route('/test/forzar')
@@ -972,7 +978,7 @@ def loop_bot():
     schedule.every().day.at("12:15").do(enviar_estudio_mediodia)
     schedule.every().day.at("16:15").do(enviar_estudio_tarde)
     
-    schedule.every().day.at("15:30").do(enviar_tasa_dolar)
+    schedule.every().day.at("18:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
     
     # Horarios programados para los mensajes automáticos intermedios
