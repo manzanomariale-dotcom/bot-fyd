@@ -99,6 +99,17 @@ PUBLICIDADES_CASHEA = [
         "04249611372\n"
         f"{ENLACE_CANAL}"
     ),
+   (
+        "💜✨ ¡JUEGA HOY, PAGA DESPUÉS! ✨💜\n"
+        "💳 *CASHEA*\n"
+        "✅ SIN INICIAL\n"
+        "🎯 Juega hoy y asegura tus animalitos\n"
+        "💰 Paga después de forma cómoda\n"
+        "🔥 ¡No te quedes sin jugar!\n\n"
+        "📲 Consulta disponibilidad por WhatsApp:\n"
+        "04249611372\n"
+        f"{ENLACE_CANAL}"
+     ),
     (
         "💜💳 *FACILIDADES CON CASHEA* 💳💜\n"
         "¿Quieres jugar tus animalitos favoritos ahora mismo y cancelarlos después?\n\n"
@@ -975,9 +986,9 @@ def loop_bot():
     schedule.every().day.at("19:30").do(enviar_mensaje_automatico)
     
     # Horarios programados para las publicidades automáticas de CASHEA (sin chocar con los mensajes importantes)
-    schedule.every().day.at("08:00").do(enviar_publicidad_cashea)
+    schedule.every().day.at("10:00").do(enviar_publicidad_cashea)
     schedule.every().day.at("14:00").do(enviar_publicidad_cashea)
-    schedule.every().day.at("16:15").do(enviar_publicidad_cashea)
+    schedule.every().day.at("18:15").do(enviar_publicidad_cashea)
 
     # Horario programado para las combinaciones automáticas diarias
     schedule.every().day.at("09:40").do(enviar_combinacion_diaria)
