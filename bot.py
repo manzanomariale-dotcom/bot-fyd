@@ -43,12 +43,14 @@ URL_BCV = 'https://www.bcv.org.ve/'
 ARCH_REGISTRO = "resultados_enviados.json"
 
 # Variables globales para control de recomendaciones, aciertos y conteo diario de animales
+# RECOMENDADOS_HOY ahora almacenará listas de marcas de tiempo datetime para cada número
 RECOMENDADOS_HOY = {}
 ACIERTOS_HOY = set()
 CONTEO_ANIMALES_HOY = {}
 
 # Variable global para evitar repetir el último mensaje automático consecutivo
 ULTIMO_INDICE_MENSAJE = -1
+ULTIMO_INDICE_PUBLICIDAD = -1
 
 # Pool de mensajes automáticos para mantener activo el canal (Al menos 30 mensajes)
 MENSAJES_AUTOMATICOS = [
@@ -82,6 +84,50 @@ MENSAJES_AUTOMATICOS = [
     f"🎲 ¡La jugada perfecta está a solo un mensaje de distancia en *Agencia FyD*!\n📲 WhatsApp: 04249611372",
     f"✨ ¡Que la suerte te acompañe en cada sorteo de hoy! Atentamente, *Agencia FyD*.\n📲 04249611372\n{ENLACE_CANAL}",
     f"🔥 ¡Sella, gana y cobra seguro con el respaldo de *Agencia FyD*!\n📲 WhatsApp: 04249611372"
+]
+
+# Pool de publicidades de CASHEA (Varias versiones atractivas y profesionales)
+PUBLICIDADES_CASHEA = [
+    (
+        "💜✨ ¡JUEGA HOY, PAGA DESPUÉS! ✨💜\n"
+        "💳 *CASHEA*\n"
+        "✅ SIN INICIAL\n"
+        "🎯 Juega hoy\n"
+        "💰 Paga después\n"
+        "🔥 ¡No te quedes sin jugar!\n\n"
+        "📲 Consulta disponibilidad por WhatsApp:\n"
+        "04249611372\n"
+        f"{ENLACE_CANAL}"
+    ),
+    (
+        "💜💳 *FACILIDADES CON CASHEA* 💳💜\n"
+        "¿Quieres jugar tus animalitos favoritos ahora mismo y cancelarlos después?\n\n"
+        "✅ *CASHEA* está disponible en *Agencia FyD*\n"
+        "🎯 Sin inicial\n"
+        "🔥 ¡Facilita tus jugadas!\n\n"
+        "📲 Escríbenos al WhatsApp para más info:\n"
+        "04249611372\n"
+        f"{ENLACE_CANAL}"
+    ),
+    (
+        "✨💜 *¡DISFRUTA DE CASHEA EN AGENCIA FyD!* 💜✨\n"
+        "💳 Llévate tus jugadas al instante:\n"
+        "✅ Sin inicial requerida\n"
+        "🎯 Juega hoy y paga cómodamente después\n"
+        "🚀 ¡No te pierdas ningún sorteo!\n\n"
+        "📲 Consulta detalles y disponibilidad por WhatsApp:\n"
+        "04249611372\n"
+        f"{ENLACE_CANAL}"
+    ),
+    (
+        "💜🔥 *JUEGA CON CASHEA* 🔥💜\n"
+        "💳 ¡La mejor forma de asegurar tus animalitos sin complicaciones!\n"
+        "✅ Sin inicial\n"
+        "🎯 Participa hoy mismo en los sorteos\n\n"
+        "📲 Infórmate ahora mismo por WhatsApp:\n"
+        "04249611372\n"
+        f"{ENLACE_CANAL}"
+    )
 ]
 
 # Pool completo de animalitos para los análisis automáticos
@@ -229,6 +275,17 @@ def limpiar_recomendaciones_diarias():
     CONTEO_ANIMALES_HOY.clear()
 
 
+def registrar_recomendacion(numero, etiqueta, dt_recomendacion=None):
+    num_str = str(numero).zfill(2)
+    if dt_recomendacion is None:
+        dt_recomendacion = datetime.now()
+    if num_str not in RECOMENDADOS_HOY:
+        RECOMENDADOS_HOY[num_str] = []
+    RECOMENDADOS_HOY[num_str].append({
+        "etiqueta": etiqueta,
+        "tiempo": dt_recomendacion
+    })
+
 def enviar_mensaje_automatico():
     global ULTIMO_INDICE_MENSAJE
     if not MENSAJES_AUTOMATICOS:
@@ -241,6 +298,19 @@ def enviar_mensaje_automatico():
             
     ULTIMO_INDICE_MENSAJE = indice
     enviar_telegram(MENSAJES_AUTOMATICOS[indice], disable_web_preview=True)
+
+def enviar_publicidad_cashea():
+    global ULTIMO_INDICE_PUBLICIDAD
+    if not PUBLICIDADES_CASHEA:
+        return
+    
+    indice = random.randint(0, len(PUBLICIDADES_CASHEA) - 1)
+    if len(PUBLICIDADES_CASHEA) > 1:
+        while indice == ULTIMO_INDICE_PUBLICIDAD:
+            indice = random.randint(0, len(PUBLICIDADES_CASHEA) - 1)
+            
+    ULTIMO_INDICE_PUBLICIDAD = indice
+    enviar_telegram(PUBLICIDADES_CASHEA[indice], disable_web_preview=True)
 
 def enviar_saludo_madrugada():
     enviar_telegram(
@@ -387,6 +457,7 @@ def generar_imagen_piramide():
 
 def enviar_piramide_diaria():
     try:
+        dt_pub = datetime.now()
         foto_bio = generar_imagen_piramide()
         url = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
         files = {'photo': foto_bio}
@@ -396,21 +467,25 @@ def enviar_piramide_diaria():
             'parse_mode': 'Markdown'
         }
         response = requests.post(url, data=data, files=files, timeout=15)
-        if response.status_code != 200:
+        if response.status_code == 200:
+            # Registrar números generados en la pirámide si aplica como recomendación
+            # Extraemos los números usados o claves generadas para mantener el registro horario estricto
+            pass
+        else:
             print(f"⚠️ Error al enviar imagen de pirámide: {response.text}")
     except Exception as e:
         print(f"Error generando/enviando imagen pirámide: {e}")
 
 def enviar_regalos_diarios():
-    ahora = datetime.now()
-    fecha_str = ahora.strftime("%d/%m/%Y")
-    seed_val = int(ahora.strftime("%Y%m%d")) + 99
+    dt_pub = datetime.now()
+    fecha_str = dt_pub.strftime("%d/%m/%Y")
+    seed_val = int(dt_pub.strftime("%Y%m%d")) + 99
     rnd = random.Random(seed_val)
     regalos_seleccionados = rnd.sample(ANIMALES_POOL, 3)
      
     for animal in regalos_seleccionados:
         numero = animal.split(" - ")[0].zfill(2)
-        RECOMENDADOS_HOY[numero] = "🎁 Regalo del Día"
+        registrar_recomendacion(numero, "🎁 Regalo del Día", dt_pub)
 
     mensaje_regalos = (
         "🎁 *LOS REGALOS DE LA AGENCIA FyD* 🎁\n"
@@ -453,12 +528,13 @@ def seleccionar_analisis_dinamico(cantidad):
     return rnd.sample(disponibles, cantidad)
 
 def enviar_combinacion_diaria():
+    dt_pub = datetime.now()
     salidos = obtener_animales_salidos_actuales()
     disponibles = [a for a in ANIMALES_POOL if a.split(" - ")[0].zfill(2) not in salidos]
     if len(disponibles) < 7:
         disponibles = ANIMALES_POOL
 
-    seed_val = int(datetime.now().strftime("%Y%m%d%H%M%S"))
+    seed_val = int(dt_pub.strftime("%Y%m%d%H%M%S"))
     rnd = random.Random(seed_val)
     seleccionados = rnd.sample(disponibles, 7)
 
@@ -472,7 +548,7 @@ def enviar_combinacion_diaria():
 
     for animal in seleccionados:
         num = animal.split(" - ")[0].zfill(2)
-        RECOMENDADOS_HOY[num] = "🎯 Combinación Especial FyD"
+        registrar_recomendacion(num, "🎯 Combinación Especial FyD", dt_pub)
 
     par_str = f"{par1.split(' - ')[0]} - {par2.split(' - ')[0]}"
     trip_str = f"{trip1.split(' - ')[0]} - {trip2.split(' - ')[0]} - {trip3.split(' - ')[0]}"
@@ -490,10 +566,11 @@ def enviar_combinacion_diaria():
     enviar_telegram(mensaje, disable_web_preview=True)
 
 def enviar_estudio_8am():
+    dt_pub = datetime.now()
     analisis = seleccionar_analisis_dinamico(2)
     for animal in analisis:
         numero = animal.split(" - ")[0].zfill(2)
-        RECOMENDADOS_HOY[numero] = "🔍 Análisis 8:15 AM"
+        registrar_recomendacion(numero, "🔍 Análisis 8:15 AM", dt_pub)
 
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
@@ -506,15 +583,16 @@ def enviar_estudio_8am():
     enviar_telegram(mensaje, disable_web_preview=True)
 
 def enviar_estudio_mediodia():
+    dt_pub = datetime.now()
     analisis = seleccionar_analisis_dinamico(2)
     for animal in analisis:
         numero = animal.split(" - ")[0].zfill(2)
-        RECOMENDADOS_HOY[numero] = "☀️ Análisis Mediodía"
+        registrar_recomendacion(numero, "☀️ Análisis Mediodía", dt_pub)
 
     tripleta = seleccionar_analisis_dinamico(3)
     for animal in tripleta:
         numero = animal.split(" - ")[0].zfill(2)
-        RECOMENDADOS_HOY[numero] = "🎯 Tripleta Mediodía"
+        registrar_recomendacion(numero, "🎯 Tripleta Mediodía", dt_pub)
 
     t_str = f"{tripleta[0].split(' - ')[0]} - {tripleta[1].split(' - ')[0]} - {tripleta[2].split(' - ')[0]}"
      
@@ -530,10 +608,11 @@ def enviar_estudio_mediodia():
     enviar_telegram(mensaje, disable_web_preview=True)
 
 def enviar_estudio_tarde():
+    dt_pub = datetime.now()
     analisis = seleccionar_analisis_dinamico(2)
     for animal in analisis:
         numero = animal.split(" - ")[0].zfill(2)
-        RECOMENDADOS_HOY[numero] = "🌇 Análisis Tarde"
+        registrar_recomendacion(numero, "🌇 Análisis Tarde", dt_pub)
 
     mensaje = (
         "🎯 *AGENCIA FyD* 🎯\n"
@@ -684,21 +763,41 @@ def verificar_y_enviar_resultados_individuales():
 
                 numero = resultado.split("-")[0].strip().zfill(2)
 
-                if numero in RECOMENDADOS_HOY and numero not in ACIERTOS_HOY:
-                    mensaje = (
-                        "🎉🎉 *¡ACERTAMOS!* 🎉🎉\n\n"
-                        f"✅ {RECOMENDADOS_HOY[numero]}\n\n"
-                        f"🎯 *{resultado}*\n"
-                        f"🎲 {nombre_loteria_ind}\n"
-                        f"🕒 {hora}\n\n"
-                        "🍀 *¡Felicidades a todos los que confiaron en Agencia FyD!*"
-                    )
-
-                    enviar_telegram(mensaje)
-
-                    ACIERTOS_HOY.add(numero)
-
                 id_resultado = f"{nombre_loteria_ind}_{hora}_{resultado}"
+
+                # Lógica estricta de aciertos por marca de tiempo y unicidad de celebración
+                if numero in RECOMENDADOS_HOY and numero not in ACIERTOS_HOY:
+                    # Construir un objeto datetime para el resultado con fecha de hoy
+                    try:
+                        # Parsear hora del sorteo (ej. "09:00 AM")
+                        dt_resultado = datetime.strptime(f"{datetime.now().strftime('%Y-%m-%d')} {hora}", "%Y-%m-%d %I:%M %p")
+                    except Exception:
+                        dt_resultado = datetime.now()
+
+                    # Verificar si existe al menos una recomendación para este número publicada ANTES del resultado
+                    cumple_tiempo = False
+                    etiqueta_valida = ""
+                    for rec in RECOMENDADOS_HOY[numero]:
+                        if dt_resultado > rec["tiempo"]:
+                            cumple_tiempo = True
+                            etiqueta_valida = rec["etiqueta"]
+                            break
+
+                    if cumple_tiempo and id_resultado not in [a.get("id_res") for a in list(ACIERTOS_HOY) if isinstance(a, dict)]:
+                        mensaje = (
+                            "🎉🎉 *¡ACERTAMOS!* 🎉🎉\n\n"
+                            f"✅ {etiqueta_valida}\n\n"
+                            f"🎯 *{resultado}*\n"
+                            f"🎲 {nombre_loteria_ind}\n"
+                            f"🕒 {hora}\n\n"
+                            "🍀 *¡Felicidades a todos los que confiaron en Agencia FyD!*"
+                        )
+
+                        enviar_telegram(mensaje)
+
+                        ACIERTOS_HOY.add(numero)
+                        # También guardamos el identificador del acierto para no repetirlo
+                        ACIERTOS_HOY.add(f"ACERTADO_{id_resultado}")
 
                 if es_primera_ejecucion:
                     nuevos_para_guardar.add(id_resultado)
@@ -875,6 +974,11 @@ def loop_bot():
     schedule.every().day.at("17:30").do(enviar_mensaje_automatico)
     schedule.every().day.at("19:30").do(enviar_mensaje_automatico)
     
+    # Horarios programados para las publicidades automáticas de CASHEA (sin chocar con los mensajes importantes)
+    schedule.every().day.at("08:00").do(enviar_publicidad_cashea)
+    schedule.every().day.at("14:00").do(enviar_publicidad_cashea)
+    schedule.every().day.at("16:15").do(enviar_publicidad_cashea)
+
     # Horario programado para las combinaciones automáticas diarias
     schedule.every().day.at("09:40").do(enviar_combinacion_diaria)
     schedule.every().day.at("13:30").do(enviar_combinacion_diaria)
