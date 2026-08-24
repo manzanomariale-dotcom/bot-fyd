@@ -35,28 +35,34 @@ TOKEN = '7691909067:AAG4EdkF0-_lpefI9ewFpo6AMhqawBZztAM'
 CANAL = '@agenciafyd'
 ENLACE_CANAL = 'https://t.me/+x4A5d5Jpu44yNzc5'
 
+# ID de Administrador o restricciones opcionales para comandos de Cashea
+ADMIN_IDS = []
+
 bot = telebot.TeleBot(TOKEN)
 
 URL_LOTERIA = 'https://lotery.winbigvzla.com/resultados'
 URL_BCV = 'https://www.bcv.org.ve/'
 
-# Archivo local para control de registros persistentes y evitar duplicados
+# Archivos locales para control persistente
 ARCH_REGISTRO = "resultados_enviados.json"
 ARCH_GANADORES = "ganadores.json"
+ARCH_CASHEA_INDEX = "cashea_index.json"
 
-# Variables globales para control de recomendaciones, aciertos y conteo diario de animales
+# ==========================================
+# CONFIGURACIÓN DE WHATSAPP (API O EXTERNO)
+# ==========================================
+WHATSAPP_API_URL = os.environ.get("WHATSAPP_API_URL", "")
+WHATSAPP_API_TOKEN = os.environ.get("WHATSAPP_API_TOKEN", "")
+WHATSAPP_DESTINATION = os.environ.get("WHATSAPP_DESTINATION", "04249611372")
+
+# Variables globales para control
 RECOMENDADOS_HOY = {}
 ACIERTOS_HOY = set()
 CONTEO_ANIMALES_HOY = {}
-
-# Diccionario temporal para manejar el flujo paso a paso del comando /ganador por usuario
 ESTADOS_GANADOR = {}
-
-# Variable global para evitar repetir el último mensaje automático consecutivo
 ULTIMO_INDICE_MENSAJE = -1
-ULTIMO_INDICE_PUBLICIDAD = -1
 
-# Pool de mensajes automáticos para mantener activo el canal (Al menos 30 mensajes)
+# Pool de mensajes automáticos
 MENSAJES_AUTOMATICOS = [
     f"🎯 *Agencia FyD* 🎯\n¡La suerte está de tu lado hoy! No te quedes sin jugar tu animalito favorito.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
     f"🔥 ¡Activos con la buena energía en *Agencia FyD*! Elige tu animalito y ven a ganar con nosotros.\n📲 WhatsApp: 04249611372",
@@ -67,81 +73,160 @@ MENSAJES_AUTOMATICOS = [
     f"🚀 ¡Arranca tu buena racha con *Agencia FyD*! Trabajamos para ti con la mejor atención.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
     f"💡 Un buen día comienza jugando con confianza. ¡Haz tus jugadas en *Agencia FyD*!\n📲 WhatsApp: 04249611372",
     f"🎯 ¡Atención apostadores! La pizarra de *Agencia FyD* está habilitada para que revientes la banca hoy.\n📲 04249611372\n{ENLACE_CANAL}",
-    f"✨ La suerte sonríe a los audaces. ¡Haz tu jugada ahora mismo en *Agencia FyD*!\n📲 WhatsApp: 04249611372",
-    f"🏆 ¡Conviértete en el próximo ganador del día con *Agencia FyD*!\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
-    f"🔥 ¡El momento de ganar es ahora! Consulta tus animalitos y juega con *Agencia FyD*.\n📲 WhatsApp: 04249611372",
-    f"🍀 Confía en tu instinto y sella tus animalitos favoritos en *Agencia FyD*.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
-    f"⚡️ ¡Rapidez, seguridad y confianza! Todo eso y más en *Agencia FyD*.\n📲 WhatsApp: 04249611372",
-    f"🎯 ¡No te quedes fuera de la jugada! Ven y participa con *Agencia FyD*.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
-    f"🌟 ¿Listo para acertar el próximo animalito? *Agencia FyD* te acompaña en cada sorteo.\n📲 04249611372",
-    f"🚀 ¡Sube la apuesta y gana en grande con los animalitos de *Agencia FyD*!\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
-    f"💡 Recuerda que en *Agencia FyD* trabajamos para ti todos los días.\n📲 WhatsApp: 04249611372",
-    f"🎲 ¡La emoción de los animalitos se vive mejor jugando con *Agencia FyD*!\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
-    f"✨ ¡Activa tu buena suerte hoy con *Agencia FyD*! Escríbenos al WhatsApp.\n📲 04249611372",
-    f"🔥 Los mejores datos y la mejor atención los encuentras aquí en *Agencia FyD*.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
-    f"🍀 ¡A ganar se ha dicho! Haz tus jugadas con confianza en *Agencia FyD*.\n📲 WhatsApp: 04249611372",
-    f"🎯 Mantén la mente positiva y juega tu animalito preferido en *Agencia FyD*.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
-    f"⚡️ ¡No esperes al último minuto! Sella tus animalitos con *Agencia FyD*.\n📲 WhatsApp: 04249611372",
-    f"🌟 ¡La banca de *Agencia FyD* te espera con las mejores opciones para hoy!\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
-    f"🚀 ¡Imparables! Así son las jugadas ganadoras en *Agencia FyD*.\n📲 WhatsApp: 04249611372",
-    f"💡 Comparte este canal con tus amigos y amigas para que más ganen con *Agencia FyD*.\n{ENLACE_CANAL}",
-    f"🎲 ¡La jugada perfecta está a solo un mensaje de distancia en *Agencia FyD*!\n📲 WhatsApp: 04249611372",
-    f"✨ ¡Que la suerte te acompañe en cada sorteo de hoy! Atentamente, *Agencia FyD*.\n📲 04249611372\n{ENLACE_CANAL}",
-    f"🔥 ¡Sella, gana y cobra seguro con el respaldo de *Agencia FyD*!\n📲 WhatsApp: 04249611372"
+    f"✨ La suerte sonríe a los audaces. ¡Haz tu jugada ahora mismo en *Agencia FyD*!\n📲 WhatsApp: 04249611372"
 ]
 
-# Pool de publicidades de CASHEA
-PUBLICIDADES_CASHEA = [
+# ==========================================
+# BIBLIOTECA DE CASHEA (TELEGRAM Y WHATSAPP)
+# ==========================================
+MENSAJES_CASHEA_TELEGRAM = [
     (
         "💜✨ ¡JUEGA HOY, PAGA DESPUÉS! ✨💜\n"
-        "💳 *CASHEA*\n"
-        "✅ SIN INICIAL\n"
-        "🎯 Juega hoy\n"
-        "💰 Paga después\n"
-        "🔥 ¡No te quedes sin jugar!\n\n"
+        "💳 *CASHEA DISPONIBLE*\n"
+        "✅ Sin inicial requerida\n"
+        "🎯 Juega hoy y asegura tus animalitos\n"
+        "💰 Cómodas cuotas para ti\n"
+        "🔥 ¡Haz tu jugada con Agencia F&D!\n\n"
         "📲 Consulta disponibilidad por WhatsApp:\n"
         "04249611372\n"
         f"{ENLACE_CANAL}"
     ),
-   (
-        "💜✨ ¡JUEGA HOY, PAGA DESPUÉS! ✨💜\n"
-        "💳 *CASHEA*\n"
-        "✅ SIN INICIAL\n"
-        "🎯 Juega hoy y asegura tus animalitos\n"
-        "💰 Paga después de forma cómoda\n"
-        "🔥 ¡No te quedes sin jugar!\n\n"
-        "📲 Consulta disponibilidad por WhatsApp:\n"
-        "04249611372\n"
-        f"{ENLACE_CANAL}"
-     ),
     (
         "💜💳 *FACILIDADES CON CASHEA* 💳💜\n"
         "¿Quieres jugar tus animalitos favoritos ahora mismo y cancelarlos después?\n\n"
-        "✅ *CASHEA* está disponible en *Agencia FyD*\n"
-        "🎯 Sin inicial\n"
-        "🔥 ¡Facilita tus jugadas!\n\n"
-        "📲 Escríbenos al WhatsApp para más info:\n"
+        "✅ *CASHEA* está disponible en *Agencia F&D*\n"
+        "🎯 Cupos altos y atención rápida\n"
+        "🔥 ¡Facilita tus jugadas hoy!\n\n"
+        "📲 Escríbenos al WhatsApp:\n"
         "04249611372\n"
         f"{ENLACE_CANAL}"
     ),
     (
-        "✨💜 *¡DISFRUTA DE CASHEA EN AGENCIA FyD!* 💜✨\n"
+        "✨💜 *¡DISFRUTA DE CASHEA EN AGENCIA F&D!* 💜✨\n"
         "💳 Llévate tus jugadas al instante:\n"
-        "✅ Sin inicial requerida\n"
+        "✅ Servicio confiable y seguro\n"
         "🎯 Juega hoy y paga cómodamente después\n"
         "🚀 ¡No te pierdas ningún sorteo!\n\n"
-        "📲 Consulta detalles y disponibilidad por WhatsApp:\n"
+        "📲 Consulta detalles por WhatsApp:\n"
         "04249611372\n"
         f"{ENLACE_CANAL}"
     ),
     (
         "💜🔥 *JUEGA CON CASHEA* 🔥💜\n"
         "💳 ¡La mejor forma de asegurar tus animalitos sin complicaciones!\n"
-        "✅ Sin inicial\n"
+        "✅ Proceso rápido y sin inicial\n"
         "🎯 Participa hoy mismo en los sorteos\n\n"
         "📲 Infórmate ahora mismo por WhatsApp:\n"
         "04249611372\n"
         f"{ENLACE_CANAL}"
+    ),
+    (
+        "🎯 *CASHEA EN AGENCIA F&D* 🎯\n"
+        "💳 ¿Sin saldo inmediato? ¡No te preocupes!\n"
+        "⚡ Atención rápida y responsable\n"
+        "💰 Cupos altos para tus jugadas\n"
+        "✅ Juega ahora y paga después\n\n"
+        "📲 Escríbenos al WhatsApp:\n"
+        "04249611372\n"
+        f"{ENLACE_CANAL}"
+    ),
+    (
+        "💜✨ *¡NO TE QUEDES SIN JUGAR!* ✨💜\n"
+        "💳 Activa tu *CASHEA* con nosotros\n"
+        "✅ Cómodas cuotas\n"
+        "🎯 Haz tu jugada con Agencia F&D\n"
+        "⚡ Proceso rápido y confiable\n\n"
+        "📲 Consulta tu cupo vía WhatsApp:\n"
+        "04249611372\n"
+        f"{ENLACE_CANAL}"
+    ),
+    (
+        "🔥 *¿CONOCES LOS BENEFICIOS DE CASHEA?* 🔥\n"
+        "💳 Disponible en *Agencia F&D*\n"
+        "💰 Cupos altos para tus animalitos\n"
+        "🎯 Juega hoy, paga después\n"
+        "✅ Servicio 100% confiable\n\n"
+        "📲 Contáctanos al WhatsApp:\n"
+        "04249611372\n"
+        f"{ENLACE_CANAL}"
+    ),
+    (
+        "💜💳 *FACILITAMOS TUS JUGADAS* 💳💜\n"
+        "Usa *CASHEA* en *Agencia F&D*:\n"
+        "⚡ Atención rápida y responsable\n"
+        "✅ Sin inicial\n"
+        "🎯 Cómodas cuotas para tus animalitos\n\n"
+        "📲 Más información por WhatsApp:\n"
+        "04249611372\n"
+        f"{ENLACE_CANAL}"
+    ),
+    (
+        "✨ *JUEGA SEGURO, JUEGA CON CASHEA* ✨\n"
+        "🎯 Todo lo que necesitas en *Agencia F&D*:\n"
+        "💰 Cupos altos\n"
+        "💳 Juega ahora y paga después\n"
+        "⚡ Proceso rápido\n\n"
+        "📲 Escríbenos al WhatsApp:\n"
+        "04249611372\n"
+        f"{ENLACE_CANAL}"
+    ),
+    (
+        "💜🔥 *¡EL PALPITO DE HOY CON CASHEA!* 🔥💜\n"
+        "💳 No dejes pasar el sorteo:\n"
+        "✅ Cómodas cuotas\n"
+        "🎯 Haz tu jugada con Agencia F&D\n"
+        "⚡ Atención rápida y confiable\n\n"
+        "📲 Consulta disponibilidad en WhatsApp:\n"
+        "04249611372\n"
+        f"{ENLACE_CANAL}"
+    )
+]
+
+MENSAJES_CASHEA_WHATSAPP = [
+    (
+        "💳 ¡CASHEA ACTIVO EN AGENCIA F&D!\n"
+        "🔥 Juega ahora y paga después\n"
+        "💰 Cupos altos | ⚡ Atención rápida\n\n"
+        "🎯 *OPCIONES DE ACCIÓN:*\n"
+        "1️⃣ Para jugar responde con: *JUGAR*\n"
+        "2️⃣ Para consultar tu cupo responde con: *CONSULTAR*\n"
+        "📲 04249611372"
+    ),
+    (
+        "💜 ¡FACILIDADES CON CASHEA!\n"
+        "✅ Sin inicial en Agencia F&D\n"
+        "🎯 Juega hoy tus animalitos y paga después\n\n"
+        "🎯 *OPCIONES DE ACCIÓN:*\n"
+        "1️⃣ Para jugar responde con: *JUGAR*\n"
+        "2️⃣ Para consultar tu cupo responde con: *CONSULTAR*\n"
+        "📲 04249611372"
+    ),
+    (
+        "✨ ¡DISFRUTA DE CASHEA HOY!\n"
+        "💳 Llévate tus jugadas al instante en Agencia F&D\n"
+        "💰 Cómodas cuotas y servicio confiable\n\n"
+        "🎯 *OPCIONES DE ACCIÓN:*\n"
+        "1️⃣ Para jugar responde con: *JUGAR*\n"
+        "2️⃣ Para consultar tu cupo responde con: *CONSULTAR*\n"
+        "📲 04249611372"
+    ),
+    (
+        "🔥 ¡JUEGA CON CASHEA EN AGENCIA F&D!\n"
+        "✅ Sin complicaciones ni inicial\n"
+        "⚡ Atención rápida y responsable\n\n"
+        "🎯 *OPCIONES DE ACCIÓN:*\n"
+        "1️⃣ Para jugar responde con: *JUGAR*\n"
+        "2️⃣ Para consultar tu cupo responde con: *CONSULTAR*\n"
+        "📲 04249611372"
+    ),
+    (
+        "🎯 ¿SIN SALDO INMEDIATO?\n"
+        "💳 Usa Cashea con Agencia F&D\n"
+        "💰 Cupos altos y cómodas cuotas\n\n"
+        "🎯 *OPCIONES DE ACCIÓN:*\n"
+        "1️⃣ Para jugar responde con: *JUGAR*\n"
+        "2️⃣ Para consultar tu cupo responde con: *CONSULTAR*\n"
+        "📲 04249611372"
     )
 ]
 
@@ -167,7 +252,7 @@ TRADUCCION_LOTERIAS = {
 }
 
 HEADER_FyD = (
-    "*AGENCIA FyD*\n"
+    "*AGENCIA F&D*\n"
     "*RESULTADOS*\n\n"
     "🎲 *{nombre_loteria}* 🎲\n"
     "Hora: {hora}\n"
@@ -180,7 +265,7 @@ app = Flask('')
 @app.route('/')
 def home():
     return (
-        f"¡El bot de resultados individuales de la <b>Agencia FyD</b> está activo en el canal {CANAL}!<br><br>"
+        f"¡El bot de resultados individuales de la <b>Agencia F&D</b> está activo en el canal {CANAL}!<br><br>"
         "<b>Enlaces de prueba rápida (Test):</b><br>"
         "👉 <a href='/test/madrugada'>Probar Saludo de Madrugada</a><br>"
         "👉 <a href='/test/piramide'>Probar Pirámide Numérica (Imagen)</a><br>"
@@ -194,7 +279,7 @@ def home():
         "👉 <a href='/test/cierre'>Probar Cierre de Jornada (8:00 PM)</a><br>"
         "👉 <a href='/test/combinacion'>Probar Combinación Diaria</a><br>"
         "👉 <a href='/test/resumen_repetidos'>Probar Resumen de Repetidos</a><br>"
-        "👉 <a href='/test/cashea'>Probar Publicidad Cashea</a><br>"
+        "👉 <a href='/test/cashea'>Probar Publicidad Cashea con Botones</a><br>"
     )
 
 @app.route('/test/madrugada')
@@ -257,21 +342,10 @@ def test_cashea():
     enviar_publicidad_cashea()
     return "Prueba de Cashea ejecutada."
 
-@app.route('/test/forzar')
-def test_forzar():
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CANAL,
-        "text": "🚨 PRUEBA DIRECTA: Si lees esto, el bot tiene acceso total y perfecto al canal.",
-        "parse_mode": "Markdown"
-    }
-    r = requests.post(url, json=payload)
-    return f"Respuesta de Telegram: {r.status_code} - {r.text}"
-
 def limpiar_texto(texto):
     return " ".join(texto.split())
 
-def enviar_telegram(mensaje, disable_web_preview=True):
+def enviar_telegram(mensaje, disable_web_preview=True, reply_markup=None):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
     payload = {
         "chat_id": CANAL, 
@@ -279,12 +353,168 @@ def enviar_telegram(mensaje, disable_web_preview=True):
         "parse_mode": "Markdown", 
         "disable_web_page_preview": disable_web_preview
     }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup.to_json()
     try:
         response = requests.post(url, json=payload, timeout=10)
         if response.status_code != 200:
             print(f"⚠️ Error al enviar al canal: {response.text}")
     except Exception as e:
         print(f"⚠️ Excepción de conexión con Telegram: {e}")
+
+# ==========================================
+# MÓDULO DE WHATSAPP
+# ==========================================
+def enviar_whatsapp(mensaje):
+    if not WHATSAPP_API_URL:
+        print(f"ℹ️ [WhatsApp Simulado/Pendiente de Configuración]: {mensaje[:40]}...")
+        return
+    try:
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {WHATSAPP_API_TOKEN}" if WHATSAPP_API_TOKEN else ""
+        }
+        payload = {
+            "phone": WHATSAPP_DESTINATION,
+            "message": mensaje
+        }
+        response = requests.post(WHATSAPP_API_URL, json=payload, headers=headers, timeout=10)
+        if response.status_code != 200:
+            print(f"⚠️ Error al enviar WhatsApp: {response.text}")
+    except Exception as e:
+        print(f"⚠️ Excepción de conexión con WhatsApp API: {e}")
+
+# ==========================================
+# GESTIÓN PERSISTENTE DE ROTACIÓN DE CASHEA
+# ==========================================
+def cargar_estado_cashea():
+    if os.path.exists(ARCH_CASHEA_INDEX):
+        try:
+            with open(ARCH_CASHEA_INDEX, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"indice_tg": 0, "indice_wa": 0, "fecha": ""}
+
+def guardar_estado_cashea(indice_tg, indice_wa):
+    data = {
+        "indice_tg": indice_tg,
+        "indice_wa": indice_wa,
+        "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    try:
+        with open(ARCH_CASHEA_INDEX, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"Error al guardar {ARCH_CASHEA_INDEX}: {e}")
+
+def enviar_publicidad_cashea(es_prueba=False):
+    if not es_prueba:
+        ahora = datetime.now()
+        minutos_actuales = ahora.hour * 60 + ahora.minute
+        inicio_minutos = 8 * 60 + 20
+        fin_minutos = 16 * 60 + 30
+        if not (inicio_minutos <= minutos_actuales <= fin_minutos):
+            return
+
+    estado = cargar_estado_cashea()
+    idx_tg = estado.get("indice_tg", 0)
+    idx_wa = estado.get("indice_wa", 0)
+
+    if not MENSAJES_CASHEA_TELEGRAM:
+        return
+    idx_tg = idx_tg % len(MENSAJES_CASHEA_TELEGRAM)
+    mensaje_tg = MENSAJES_CASHEA_TELEGRAM[idx_tg]
+
+    if not MENSAJES_CASHEA_WHATSAPP:
+        return
+    idx_wa = idx_wa % len(MENSAJES_CASHEA_WHATSAPP)
+    if len(MENSAJES_CASHEA_WHATSAPP) > 1 and idx_wa == idx_tg:
+        idx_wa = (idx_wa + 1) % len(MENSAJES_CASHEA_WHATSAPP)
+    mensaje_wa = MENSAJES_CASHEA_WHATSAPP[idx_wa]
+
+    # Crear botones inline para Telegram
+    markup_cashea = InlineKeyboardMarkup()
+    markup_cashea.row(
+        InlineKeyboardButton("🎯 JUGAR CON CASHEA", callback_data="cashea_jugar"),
+        InlineKeyboardButton("💳 CONSULTAR CASHEA", callback_data="cashea_consultar")
+    )
+
+    enviar_telegram(mensaje_tg, disable_web_preview=True, reply_markup=markup_cashea)
+    enviar_whatsapp(mensaje_wa)
+
+    if not es_prueba:
+        siguiente_tg = (idx_tg + 1) % len(MENSAJES_CASHEA_TELEGRAM)
+        siguiente_wa = (idx_wa + 1) % len(MENSAJES_CASHEA_WHATSAPP)
+        guardar_estado_cashea(siguiente_tg, siguiente_wa)
+
+# ==========================================
+# CALLBACKS E INTERACTIVIDAD DE LOS BOTONES CASHEA
+# ==========================================
+@bot.callback_query_handler(func=lambda call: call.data in ["cashea_jugar", "cashea_consultar"])
+def callback_botones_cashea(call):
+    if call.data == "cashea_jugar":
+        texto_respuesta = (
+            "🎯 *¡VAMOS A JUGAR!* 🎯\n\n"
+            "Para procesar tu jugada en **Agencia F&D** envíanos por privado o WhatsApp:\n"
+            "1️⃣ Lotería\n"
+            "2️⃣ Número / Jugada\n"
+            "3️⃣ Monto\n\n"
+            "Luego realiza el proceso de Cashea según el procedimiento configurado por nuestra agencia.\n\n"
+            "📲 *WhatsApp directo:* 04249611372"
+        )
+        bot.answer_callback_query(call.data, "Cargando instrucciones de juego...", show_alert=False)
+        bot.send_message(call.message.chat.id, texto_respuesta, parse_mode="Markdown")
+
+    elif call.data == "cashea_consultar":
+        texto_respuesta = (
+            "💳 *CONSULTAR / SOLICITAR CASHEA* 💳\n\n"
+            "Para verificar disponibilidad o solicitar tu cupo Cashea con **Agencia F&D**:\n"
+            "1️⃣ Escríbenos directamente a nuestro WhatsApp oficial.\n"
+            "2️⃣ Solicita la verificación de tu perfil o cupo disponible.\n"
+            "3️⃣ ¡Listo! Te indicaremos el paso a paso seguro.\n\n"
+            "📲 *WhatsApp oficial:* 04249611372"
+        )
+        bot.answer_callback_query(call.data, "Cargando información de consulta...", show_alert=False)
+        bot.send_message(call.message.chat.id, texto_respuesta, parse_mode="Markdown")
+
+# ==========================================
+# COMANDOS ADMINISTRATIVOS DE CASHEA
+# ==========================================
+@bot.message_handler(commands=['cashea'])
+def cmd_cashea_inmediato(message):
+    if ADMIN_IDS and message.from_user.id not in ADMIN_IDS:
+        bot.reply_to(message, "⚠️ No tienes permisos para usar este comando.")
+        return
+    enviar_publicidad_cashea(es_prueba=False)
+    bot.reply_to(message, "✅ Publicidad de Cashea ejecutada con botones y rotación avanzada.")
+
+@bot.message_handler(commands=['cashea_test'])
+def cmd_cashea_test(message):
+    if ADMIN_IDS and message.from_user.id not in ADMIN_IDS:
+        bot.reply_to(message, "⚠️ No tienes permisos para usar este comando.")
+        return
+    enviar_publicidad_cashea(es_prueba=True)
+    bot.reply_to(message, "🧪 Prueba de Cashea enviada con botones (la rotación normal no fue afectada).")
+
+@bot.message_handler(commands=['cashea_estado'])
+def cmd_cashea_estado(message):
+    if ADMIN_IDS and message.from_user.id not in ADMIN_IDS:
+        bot.reply_to(message, "⚠️ No tienes permisos para usar este comando.")
+        return
+    estado = cargar_estado_cashea()
+    idx_tg = estado.get("indice_tg", 0)
+    idx_wa = estado.get("indice_wa", 0)
+    ultima_fecha = estado.get("fecha", "Desconocida")
+  
+    info = (
+        "📊 *ESTADO DE ROTACIÓN CASHEA* 📊\n\n"
+        f"📍 Siguiente índice Telegram: `{idx_tg}` (Total: {len(MENSAJES_CASHEA_TELEGRAM)})\n"
+        f"📍 Siguiente índice WhatsApp: `{idx_wa}` (Total: {len(MENSAJES_CASHEA_WHATSAPP)})\n"
+        f"🕒 Última actualización persistente: `{ultima_fecha}`\n"
+        f"⏰ Horario activo: 8:20 AM - 4:30 PM (America/Caracas)"
+    )
+    bot.reply_to(message, info, parse_mode="Markdown")
 
 def limpiar_recomendaciones_diarias():
     RECOMENDADOS_HOY.clear()
@@ -313,20 +543,9 @@ def enviar_mensaje_automatico():
     ULTIMO_INDICE_MENSAJE = indice
     enviar_telegram(MENSAJES_AUTOMATICOS[indice], disable_web_preview=True)
 
-def enviar_publicidad_cashea():
-    global ULTIMO_INDICE_PUBLICIDAD
-    if not PUBLICIDADES_CASHEA:
-        return
-    indice = random.randint(0, len(PUBLICIDADES_CASHEA) - 1)
-    if len(PUBLICIDADES_CASHEA) > 1:
-        while indice == ULTIMO_INDICE_PUBLICIDAD:
-            indice = random.randint(0, len(PUBLICIDADES_CASHEA) - 1)
-    ULTIMO_INDICE_PUBLICIDAD = indice
-    enviar_telegram(PUBLICIDADES_CASHEA[indice], disable_web_preview=True)
-
 def enviar_saludo_madrugada():
     enviar_telegram(
-        "🎯 AGENCIA FyD 🎯\n\n"
+        "🎯 AGENCIA F&D 🎯\n\n"
         "*¡Activados desde temprano! 🌟 Que este día nos traiga mucha suerte y grandes jugadas. ¡Muy buenos días! 🔥*\n"
         "WHATSAPP: 04249611372",
         disable_web_preview=True
@@ -390,7 +609,7 @@ def generar_imagen_piramide():
         font_pir = ImageFont.load_default()
         font_data = ImageFont.load_default()
 
-    draw.text((img_width // 2, 45), "AGENCIA FyD", fill=color_dorado, anchor="mm", font=font_title)
+    draw.text((img_width // 2, 45), "AGENCIA F&D", fill=color_dorado, anchor="mm", font=font_title)
     draw.text((img_width // 2, 90), "Trabajamos para tí", fill=color_blanco, anchor="mm", font=font_sub)
     draw.text((img_width // 2, 145), "PIRÁMIDE DEL DÍA", fill=color_morado, anchor="mm", font=font_title)
 
@@ -478,7 +697,7 @@ def enviar_regalos_diarios():
         registrar_recomendacion(numero, "🎁 Regalo del Día", dt_pub)
 
     mensaje_regalos = (
-        "🎁 *LOS REGALOS DE LA AGENCIA FyD* 🎁\n"
+        "🎁 *LOS REGALOS DE LA AGENCIA F&D* 🎁\n"
         f"📅 Fecha: {fecha_str}\n\n"
         "¡Los fijos recomendados para reventar la banca hoy:\n\n"
         f"🌟 *1er Regalo:* {regalos_seleccionados[0]}\n"
@@ -536,13 +755,13 @@ def enviar_combinacion_diaria():
 
     for animal in seleccionados:
         num = animal.split(" - ")[0].zfill(2)
-        registrar_recomendacion(num, "🎯 Combinación Especial FyD", dt_pub)
+        registrar_recomendacion(num, "🎯 Combinación Especial F&D", dt_pub)
 
     par_str = f"{par1.split(' - ')[0]} - {par2.split(' - ')[0]}"
     trip_str = f"{trip1.split(' - ')[0]} - {trip2.split(' - ')[0]} - {trip3.split(' - ')[0]}"
 
     mensaje = (
-        "🎯 *COMBINACIÓN GANADORA - AGENCIA FyD* 🎯\n"
+        "🎯 *COMBINACIÓN GANADORA - AGENCIA F&D* 🎯\n"
         "🔥 ¡Datos exclusivos y directos para asegurar tus jugadas:\n\n"
         f"📌 *Fijos del Día:* `{fijo1}` y `{fijo2}`\n"
         f"📌 *El Par:* `{par_str}`\n"
@@ -561,7 +780,7 @@ def enviar_estudio_8am():
         registrar_recomendacion(numero, "🔍 Análisis 8:15 AM", dt_pub)
 
     mensaje = (
-        "🎯 *AGENCIA FyD* 🎯\n"
+        "🎯 *AGENCIA F&D* 🎯\n"
         "🔍 *ANÁLISIS TRAS EL SORTEO DE LAS 8:00 AM* 🔍\n\n"
         "¡Ya salieron los primeros animalitos! Evaluando la apertura de la pizarra y descartando lo ya jugado, la casa trae las recomendaciones probables para los siguientes sorteos:\n\n"
         f"🔥 *Regalitos recomendados:* `{analisis[0]}` y `{analisis[1]}`\n\n"
@@ -585,7 +804,7 @@ def enviar_estudio_mediodia():
     t_str = f"{tripleta[0].split(' - ')[0]} - {tripleta[1].split(' - ')[0]} - {tripleta[2].split(' - ')[0]}"
      
     mensaje = (
-        "🎯 *AGENCIA FyD* 🎯\n"
+        "🎯 *AGENCIA F&D* 🎯\n"
         "☀️ *ANÁLISIS DEL MEDIODÍA* ☀️\n\n"
         "*¡Mitad de jornada! Estudiando los resultados que nos dejó la mañana y analizando tendencias en vivo, el tablero apunta hacia las siguientes proyecciones:*\n\n"
         f"🔥 *Animales calientes:* `{analisis[0]}` y `{analisis[1]}`\n"
@@ -603,7 +822,7 @@ def enviar_estudio_tarde():
         registrar_recomendacion(numero, "🌇 Análisis Tarde", dt_pub)
 
     mensaje = (
-        "🎯 *AGENCIA FyD* 🎯\n"
+        "🎯 *AGENCIA F&D* 🎯\n"
         "🌇 *ANÁLISIS Y CIERRE DE LA TARDE* 🌇\n\n"
         "¡A pocas horas de terminar la jornada! Evaluando el comportamiento de los últimos sortos y filtrando los ganadores del día, la casa trae los animales con mayor probabilidad de reventar para asegurar el cierre:\n\n"
         f"⚡️ *Imparables de la Tarde / Cierre:* `{analisis[0]}` y `{analisis[1]}`\n\n"
@@ -614,7 +833,7 @@ def enviar_estudio_tarde():
 
 def enviar_saludo_matutino():
     enviar_telegram(
-        "🎯 AGENCIA FyD 🎯\n\n"
+        "🎯 AGENCIA F&D 🎯\n\n"
         "☀️ ¡Buenos días! Arrancamos la jornada con la mejor actitud y la mejor energía para ganar.\n\n"
         "📲 WHATSAPP: 04249611372\n"
         "¡Mucho éxito en tus jugadas de hoy! 🍀🔥",
@@ -642,7 +861,7 @@ def enviar_tasa_dolar():
 
 def enviar_mensaje_cierre():
     enviar_telegram(
-        "AGENCIA FyD\n"
+        "AGENCIA F&D\n"
         "🌙 ¡FINAL DE JORNADA! 🌙\n"
         "*¡Listo por hoy! 🚀 Que descansen y sueñen en grande. Mañana nos vemos tempranito con más suerte y nuevos retos. ¡Buenas noches! 🌟💤*",
         disable_web_preview=True
@@ -651,7 +870,7 @@ def enviar_mensaje_cierre():
 def enviar_aviso_cierre_sorteo():
     enviar_telegram(
         "🛑 *¡ATENCIÓN!* 🛑\n\n"
-        "El tiempo de jugadas ha terminado por este sorteo en la **AGENCIA FyD**.\n\n"
+        "El tiempo de jugadas ha terminado por este sorteo en la **AGENCIA F&D**.\n\n"
         "🤞 ¡Cruzamos los dedos por ti, mucha suerte en tus apuestas! 🎲🔥",
         disable_web_preview=True
     )
@@ -679,9 +898,8 @@ def guardar_registros(enviados_set):
         print(f"Error al guardar registros: {e}")
 
 # ==========================================
-# MÓDULO NUEVO: GESTIÓN DE GANADORES (AGENCIA SOFÍA)
+# MÓDULO: GESTIÓN DE GANADORES (AGENCIAf&D)
 # ==========================================
-
 def cargar_ganadores_persistentes():
     if os.path.exists(ARCH_GANADORES):
         try:
@@ -747,7 +965,6 @@ def procesar_capture_ganador(message):
     chat_id = message.chat.id
     estado = ESTADOS_GANADOR[chat_id]
 
-    # Obtener la foto enviada (capture de pago)
     file_id = message.photo[-1].file_id
     estado["datos"]["capture_file_id"] = file_id
     estado["paso"] = "confirmar"
@@ -772,7 +989,6 @@ def procesar_capture_ganador(message):
         f"{ENLACE_CANAL}"
     )
 
-    # Mostrar la vista previa usando el mismo capture que envió el usuario
     bot.send_photo(chat_id, file_id, caption=caption_preview, reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: call.data in ["ganador_publicar", "ganador_cancelar"])
@@ -814,7 +1030,6 @@ def callback_publicar_ganador(call):
                 f"{ENLACE_CANAL}"
             )
 
-            # Publicar directamente el capture de pago original con el texto como pie de foto (caption) en el canal
             url = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
             payload = {
                 'chat_id': CANAL,
@@ -824,7 +1039,6 @@ def callback_publicar_ganador(call):
             }
             requests.post(url, json=payload, timeout=15)
 
-            # Guardar en ganadores.json con el capture asociado internamente
             registro_final = {
                 "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "nombre": datos["nombre"],
@@ -848,10 +1062,6 @@ def callback_publicar_ganador(call):
             bot.send_message(chat_id, f"⚠️ Error al publicar en el canal: {str(e)}")
         finally:
             ESTADOS_GANADOR.pop(chat_id, None)
-
-# ==========================================
-# FIN DEL MÓDULO DE GANADORES
-# ==========================================
 
 def verificar_y_enviar_resultados_individuales():
     enviados_hoy = cargar_registros()
@@ -944,7 +1154,7 @@ def verificar_y_enviar_resultados_individuales():
                             f"🎯 *{resultado}*\n"
                             f"🎲 {nombre_loteria_ind}\n"
                             f"🕒 {hora}\n\n"
-                            "🍀 *¡Felicidades a todos los que confiaron en Agencia FyD!*"
+                            "🍀 *¡Felicidades a todos los que confiaron en Agencia F&D!*"
                         )
                         enviar_telegram(mensaje)
                         ACIERTOS_HOY.add(numero)
@@ -1074,7 +1284,7 @@ def cmd_resumen(message):
 
         fecha_hoy = datetime.now().strftime("%d/%m/%Y")
         texto_final = (
-            "🎯 *AGENCIA FyD* 🎯\n"
+            "🎯 *AGENCIA F&D* 🎯\n"
             "_Trabajamos para tí_\n\n"
             "📊 *RESUMEN DE GANADORES DEL DÍA* 📊\n"
             f"📅 Fecha: {fecha_hoy}\n\n"
@@ -1120,9 +1330,12 @@ def loop_bot():
     schedule.every().day.at("17:30").do(enviar_mensaje_automatico)
     schedule.every().day.at("19:30").do(enviar_mensaje_automatico)
     
-    schedule.every().day.at("08:00").do(enviar_publicidad_cashea)
+    # Horarios programados para Cashea (dentro de la franja 8:20 AM - 4:30 PM)
+    schedule.every().day.at("08:30").do(enviar_publicidad_cashea)
+    schedule.every().day.at("10:15").do(enviar_publicidad_cashea)
+    schedule.every().day.at("12:00").do(enviar_publicidad_cashea)
     schedule.every().day.at("14:00").do(enviar_publicidad_cashea)
-    schedule.every().day.at("16:15").do(enviar_publicidad_cashea)
+    schedule.every().day.at("16:00").do(enviar_publicidad_cashea)
 
     schedule.every().day.at("09:40").do(enviar_combinacion_diaria)
     schedule.every().day.at("13:30").do(enviar_combinacion_diaria)
