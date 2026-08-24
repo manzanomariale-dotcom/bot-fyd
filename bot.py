@@ -700,57 +700,6 @@ def guardar_ganador_persistente(registro):
     except Exception as e:
         print(f"Error al guardar ganadores.json: {e}")
 
-def generar_imagen_tarjeta_ganador(nombre, loteria, numero, premio):
-    img_width, img_height = 1000, 1000
-    image = Image.new("RGB", (img_width, img_height), color=(25, 10, 35)) # Fondo morado elegante Agencia Sofía
-    draw = ImageDraw.Draw(image)
-
-    color_dorado = (212, 175, 55)
-    color_dorado_claro = (243, 229, 149)
-    color_blanco = (255, 255, 255)
-    color_panel = (35, 15, 50)
-
-    try:
-        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 46)
-        font_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 32)
-        font_data = ImageFont.truetype("DejaVuSans-Bold.ttf", 30)
-        font_winner = ImageFont.truetype("DejaVuSans-Bold.ttf", 38)
-    except:
-        font_title = ImageFont.load_default()
-        font_sub = ImageFont.load_default()
-        font_data = ImageFont.load_default()
-        font_winner = ImageFont.load_default()
-
-    # Cabecera
-    draw.text((img_width // 2, 70), "🏆 ¡TENEMOS GANADOR! 🏆", fill=color_dorado, anchor="mm", font=font_title)
-    draw.text((img_width // 2, 130), "AGENCIA SOFÍA", fill=color_blanco, anchor="mm", font=font_sub)
-
-    # Panel Central de Datos
-    draw.rectangle([100, 180, img_width - 100, 750], fill=color_panel, outline=color_dorado, width=3)
-    
-    fecha_actual = datetime.now().strftime("%d/%m/%Y")
-    
-    y_pos = 240
-    draw.text((img_width // 2, y_pos), f"📅 Fecha: {fecha_actual}", fill=color_dorado_claro, anchor="mm", font=font_data)
-    y_pos += 90
-    draw.text((img_width // 2, y_pos), f"🎯 Lotería: {loteria.upper()}", fill=color_blanco, anchor="mm", font=font_data)
-    y_pos += 90
-    draw.text((img_width // 2, y_pos), f"🔢 Número / Jugada: {numero}", fill=color_dorado_claro, anchor="mm", font=font_data)
-    y_pos += 90
-    draw.text((img_width // 2, y_pos), f"💰 Premio: {premio}", fill=color_blanco, anchor="mm", font=font_data)
-    y_pos += 110
-    draw.text((img_width // 2, y_pos), f"🎉 ¡FELICIDADES, {nombre.upper()}! 🎉", fill=color_dorado, anchor="mm", font=font_winner)
-
-    # Pie de página
-    draw.text((img_width // 2, 850), "Gracias por confiar en Agencia Sofía. 🍀", fill=color_dorado_claro, anchor="mm", font=font_sub)
-    draw.text((img_width // 2, 920), ENLACE_CANAL, fill=color_blanco, anchor="mm", font=font_data)
-
-    bio = BytesIO()
-    bio.name = 'ganador_sofia.png'
-    image.save(bio, 'PNG')
-    bio.seek(0)
-    return bio
-
 @bot.message_handler(commands=['ganador'])
 def cmd_ganador(message):
     chat_id = message.chat.id
@@ -760,7 +709,7 @@ def cmd_ganador(message):
     }
     bot.send_message(
         chat_id,
-        "🏆 Vamos a registrar un ganador para **Agencia Sofía**.\n\n"
+        "🏆 Vamos a registrar un ganador para **Agencia F&D**.\n\n"
         "✍️ Envíame el **nombre del ganador**:",
         parse_mode="Markdown"
     )
@@ -791,50 +740,40 @@ def procesar_pasos_ganador(message):
     elif paso_actual == "premio":
         estado["datos"]["premio"] = texto
         estado["paso"] = "capture"
-        bot.send_message(chat_id, "📸 Ahora envíame el **capture de pago realizado** (como foto). Quedará guardado internamente como comprobante.")
+        bot.send_message(chat_id, "📸 Ahora envíame el **capture del pago realizado** (como foto). Será la imagen publicada con el texto como pie de página.")
 
 @bot.message_handler(content_types=['photo'], func=lambda m: m.chat.id in ESTADOS_GANADOR and ESTADOS_GANADOR[m.chat.id].get("paso") == "capture")
 def procesar_capture_ganador(message):
     chat_id = message.chat.id
     estado = ESTADOS_GANADOR[chat_id]
 
-    # Obtener la foto de mayor resolución
+    # Obtener la foto enviada (capture de pago)
     file_id = message.photo[-1].file_id
     estado["datos"]["capture_file_id"] = file_id
     estado["paso"] = "confirmar"
 
     datos = estado["datos"]
-    
-    bot.send_message(chat_id, "⏳ Generando tarjeta promocional de **Agencia Sofía**...")
 
-    try:
-        # Generar imagen publicitaria
-        imagen_bio = generar_imagen_tarjeta_ganador(
-            datos["nombre"],
-            datos["loteria"],
-            datos["numero"],
-            datos["premio"]
-        )
+    markup = InlineKeyboardMarkup()
+    markup.row(
+        InlineKeyboardButton("✅ PUBLICAR", callback_data="ganador_publicar"),
+        InlineKeyboardButton("❌ CANCELAR", callback_data="ganador_cancelar")
+    )
 
-        markup = InlineKeyboardMarkup()
-        markup.row(
-            InlineKeyboardButton("✅ PUBLICAR", callback_data="ganador_publicar"),
-            InlineKeyboardButton("❌ CANCELAR", callback_data="ganador_cancelar")
-        )
+    caption_preview = (
+        "🔎 **Vista previa del mensaje que irá en el pie del capture:**\n\n"
+        "🏆 *¡TENEMOS GANADOR!* 🏆\n\n"
+        "*AGENCIA F&D*\n\n"
+        f"🎯 Lotería: {datos['loteria']}\n"
+        f"🔢 Número: {datos['numero']}\n"
+        f"💰 Premio: {datos['premio']}\n\n"
+        f"🎉 ¡FELICIDADES, {datos['nombre'].upper()}!\n\n"
+        "Gracias por confiar en Agencia F&D. 🍀\n"
+        f"{ENLACE_CANAL}"
+    )
 
-        caption_preview = (
-            "🔎 **Vista previa del registro de ganador:**\n\n"
-            f"👤 **Nombre:** {datos['nombre']}\n"
-            f"🎯 **Lotería:** {datos['loteria']}\n"
-            f"🔢 **Número:** {datos['numero']}\n"
-            f"💰 **Premio:** {datos['premio']}\n\n"
-            "¿Deseas publicar este ganador en el canal?"
-        )
-
-        bot.send_photo(chat_id, imagen_bio, caption=caption_preview, reply_markup=markup, parse_mode="Markdown")
-    except Exception as e:
-        bot.send_message(chat_id, f"⚠️ Error generando la imagen: {str(e)}")
-        ESTADOS_GANADOR.pop(chat_id, None)
+    # Mostrar la vista previa usando el mismo capture que envió el usuario
+    bot.send_photo(chat_id, file_id, caption=caption_preview, reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: call.data in ["ganador_publicar", "ganador_cancelar"])
 def callback_publicar_ganador(call):
@@ -847,12 +786,15 @@ def callback_publicar_ganador(call):
 
     if call.data == "ganador_cancelar":
         ESTADOS_GANADOR.pop(chat_id, None)
-        bot.edit_message_caption(
-            chat_id=chat_id,
-            message_id=call.message.message_id,
-            caption="❌ Registro de ganador cancelado.",
-            reply_markup=None
-        )
+        try:
+            bot.edit_message_caption(
+                chat_id=chat_id,
+                message_id=call.message.message_id,
+                caption="❌ Registro de ganador cancelado.",
+                reply_markup=None
+            )
+        except Exception:
+            bot.send_message(chat_id, "❌ Registro de ganador cancelado.")
         bot.answer_callback_query(call.id, "Cancelado con éxito.")
         return
 
@@ -861,34 +803,26 @@ def callback_publicar_ganador(call):
         try:
             bot.answer_callback_query(call.id, "Publicando ganador...")
 
-            # Re-generar la imagen para enviar al canal público
-            imagen_bio = generar_imagen_tarjeta_ganador(
-                datos["nombre"],
-                datos["loteria"],
-                datos["numero"],
-                datos["premio"]
-            )
-
             texto_canal = (
                 "🏆 ¡TENEMOS GANADOR! 🏆\n\n"
-                "*AGENCIA SOFÍA*\n\n"
+                "*AGENCIA F&D*\n\n"
                 f"🎯 Lotería: {datos['loteria']}\n"
                 f"🔢 Número: {datos['numero']}\n"
                 f"💰 Premio: {datos['premio']}\n\n"
                 f"🎉 ¡FELICIDADES, {datos['nombre'].upper()}!\n\n"
-                "Gracias por confiar en Agencia Sofía. 🍀\n"
+                "Gracias por confiar en Agencia F&D. 🍀\n"
                 f"{ENLACE_CANAL}"
             )
 
-            # Publicar en el canal principal configurado
+            # Publicar directamente el capture de pago original con el texto como pie de foto (caption) en el canal
             url = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
-            files = {'photo': imagen_bio}
             payload = {
                 'chat_id': CANAL,
+                'photo': datos['capture_file_id'],
                 'caption': texto_canal,
                 'parse_mode': 'Markdown'
             }
-            requests.post(url, data=payload, files=files, timeout=15)
+            requests.post(url, json=payload, timeout=15)
 
             # Guardar en ganadores.json con el capture asociado internamente
             registro_final = {
@@ -901,12 +835,15 @@ def callback_publicar_ganador(call):
             }
             guardar_ganador_persistente(registro_final)
 
-            bot.edit_message_caption(
-                chat_id=chat_id,
-                message_id=call.message.message_id,
-                caption="✅ ¡Ganador publicado con éxito en el canal y registrado en ganadores.json!",
-                reply_markup=None
-            )
+            try:
+                bot.edit_message_caption(
+                    chat_id=chat_id,
+                    message_id=call.message.message_id,
+                    caption="✅ ¡Ganador publicado con éxito usando el capture en el canal y registrado en ganadores.json!",
+                    reply_markup=None
+                )
+            except Exception:
+                bot.send_message(chat_id, "✅ ¡Ganador publicado con éxito!")
         except Exception as e:
             bot.send_message(chat_id, f"⚠️ Error al publicar en el canal: {str(e)}")
         finally:
