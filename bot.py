@@ -24,6 +24,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import traceback
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
+import urllib.parse  # 📌 Importado para codificar el mensaje de WhatsApp
 
 # Desactivar advertencias de certificados SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -35,7 +36,7 @@ TOKEN = '7691909067:AAG4EdkF0-_lpefI9ewFpo6AMhqawBZztAM'
 CANAL = '@agenciafyd'
 ENLACE_CANAL = 'https://t.me/+x4A5d5Jpu44yNzc5'
 
-# ID de Administrador o restricciones opcionales para comandos de Cashea
+# ID de Administrador o restricciones opcionales para comandos
 ADMIN_IDS = []
 
 bot = telebot.TeleBot(TOKEN)
@@ -211,7 +212,7 @@ MENSAJES_CASHEA_WHATSAPP = [
         "📲 04249611372"
     ),
     (
-        "🔥 ¡JUEGA CON CASHEA EN AGENCIA F&D!\n"
+        "🔥 ¡JUEGA con CASHEA EN AGENCIA F&D!\n"
         "✅ Sin complicaciones ni inicial\n"
         "⚡ Atención rápida y responsable\n\n"
         "🎯 *OPCIONES DE ACCIÓN:*\n"
@@ -433,11 +434,19 @@ def enviar_publicidad_cashea(es_prueba=False):
         idx_wa = (idx_wa + 1) % len(MENSAJES_CASHEA_WHATSAPP)
     mensaje_wa = MENSAJES_CASHEA_WHATSAPP[idx_wa]
 
-    # Crear botones inline para Telegram
+    # 📌 Enlaces directos a WhatsApp para los botones en línea
+    numero_wa = "584249611372"
+    msg_jugar = urllib.parse.quote("Hola, quiero jugar con Cashea en Agencia F&D.")
+    msg_consultar = urllib.parse.quote("Hola, quiero consultar mi cupo o disponibilidad de Cashea en Agencia F&D.")
+    
+    url_jugar = f"https://wa.me/{numero_wa}?text={msg_jugar}"
+    url_consultar = f"https://wa.me/{numero_wa}?text={msg_consultar}"
+
+    # Crear botones inline con URL hacia WhatsApp
     markup_cashea = InlineKeyboardMarkup()
     markup_cashea.row(
-        InlineKeyboardButton("🎯 JUGAR CON CASHEA", callback_data="cashea_jugar"),
-        InlineKeyboardButton("💳 CONSULTAR CASHEA", callback_data="cashea_consultar")
+        InlineKeyboardButton("🎯 JUGAR CON CASHEA", url=url_jugar),
+        InlineKeyboardButton("💳 CONSULTAR CASHEA", url=url_consultar)
     )
 
     enviar_telegram(mensaje_tg, disable_web_preview=True, reply_markup=markup_cashea)
@@ -447,36 +456,6 @@ def enviar_publicidad_cashea(es_prueba=False):
         siguiente_tg = (idx_tg + 1) % len(MENSAJES_CASHEA_TELEGRAM)
         siguiente_wa = (idx_wa + 1) % len(MENSAJES_CASHEA_WHATSAPP)
         guardar_estado_cashea(siguiente_tg, siguiente_wa)
-
-# ==========================================
-# CALLBACKS E INTERACTIVIDAD DE LOS BOTONES CASHEA
-# ==========================================
-@bot.callback_query_handler(func=lambda call: call.data in ["cashea_jugar", "cashea_consultar"])
-def callback_botones_cashea(call):
-    if call.data == "cashea_jugar":
-        texto_respuesta = (
-            "🎯 *¡VAMOS A JUGAR!* 🎯\n\n"
-            "Para procesar tu jugada en **Agencia F&D** envíanos por privado o WhatsApp:\n"
-            "1️⃣ Lotería\n"
-            "2️⃣ Número / Jugada\n"
-            "3️⃣ Monto\n\n"
-            "Luego realiza el proceso de Cashea según el procedimiento configurado por nuestra agencia.\n\n"
-            "📲 *WhatsApp directo:* 04249611372"
-        )
-        bot.answer_callback_query(call.data, "Cargando instrucciones de juego...", show_alert=False)
-        bot.send_message(call.message.chat.id, texto_respuesta, parse_mode="Markdown")
-
-    elif call.data == "cashea_consultar":
-        texto_respuesta = (
-            "💳 *CONSULTAR / SOLICITAR CASHEA* 💳\n\n"
-            "Para verificar disponibilidad o solicitar tu cupo Cashea con **Agencia F&D**:\n"
-            "1️⃣ Escríbenos directamente a nuestro WhatsApp oficial.\n"
-            "2️⃣ Solicita la verificación de tu perfil o cupo disponible.\n"
-            "3️⃣ ¡Listo! Te indicaremos el paso a paso seguro.\n\n"
-            "📲 *WhatsApp oficial:* 04249611372"
-        )
-        bot.answer_callback_query(call.data, "Cargando información de consulta...", show_alert=False)
-        bot.send_message(call.message.chat.id, texto_respuesta, parse_mode="Markdown")
 
 # ==========================================
 # COMANDOS ADMINISTRATIVOS DE CASHEA
@@ -898,7 +877,7 @@ def guardar_registros(enviados_set):
         print(f"Error al guardar registros: {e}")
 
 # ==========================================
-# MÓDULO: GESTIÓN DE GANADORES (AGENCIAf&D)
+# MÓDULO: GESTIÓN DE GANADORES (AGENCIA F&D)
 # ==========================================
 def cargar_ganadores_persistentes():
     if os.path.exists(ARCH_GANADORES):
