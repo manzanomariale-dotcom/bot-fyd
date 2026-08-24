@@ -20,6 +20,7 @@ from datetime import datetime
 import random
 import json
 import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import traceback
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
@@ -41,12 +42,15 @@ URL_BCV = 'https://www.bcv.org.ve/'
 
 # Archivo local para control de registros persistentes y evitar duplicados
 ARCH_REGISTRO = "resultados_enviados.json"
+ARCH_GANADORES = "ganadores.json"
 
 # Variables globales para control de recomendaciones, aciertos y conteo diario de animales
-# RECOMENDADOS_HOY ahora almacenará listas de marcas de tiempo datetime para cada número
 RECOMENDADOS_HOY = {}
 ACIERTOS_HOY = set()
 CONTEO_ANIMALES_HOY = {}
+
+# Diccionario temporal para manejar el flujo paso a paso del comando /ganador por usuario
+ESTADOS_GANADOR = {}
 
 # Variable global para evitar repetir el último mensaje automático consecutivo
 ULTIMO_INDICE_MENSAJE = -1
@@ -86,7 +90,7 @@ MENSAJES_AUTOMATICOS = [
     f"🔥 ¡Sella, gana y cobra seguro con el respaldo de *Agencia FyD*!\n📲 WhatsApp: 04249611372"
 ]
 
-# Pool de publicidades de CASHEA (Varias versiones atractivas y profesionales)
+# Pool de publicidades de CASHEA
 PUBLICIDADES_CASHEA = [
     (
         "💜✨ ¡JUEGA HOY, PAGA DESPUÉS! ✨💜\n"
@@ -141,7 +145,6 @@ PUBLICIDADES_CASHEA = [
     )
 ]
 
-# Pool completo de animalitos para los análisis automáticos
 ANIMALES_POOL = [
     "00 - Ballena", "0- Delfin","01 - Carnero", "02 - Toro", "03 - Ciempiés", "04 - Alacrán", 
     "05 - León", "06 - Rana", "07 - Perico", "08 - Ratón", "09 - Águila", 
@@ -153,7 +156,6 @@ ANIMALES_POOL = [
     "35 - Jirafa", "36 - Culebra"
 ]
 
-# Diccionario de abreviaturas oficiales solicitadas para resultados individuales
 TRADUCCION_LOTERIAS = {
     "L.A": "LOTTO ACTIVO",
     "GRJ": "GRANJITA",
@@ -191,11 +193,10 @@ def home():
         "👉 <a href='/test/sorteo'>Probar Cierre de Sorteo (Min 25/55)</a><br>"
         "👉 <a href='/test/cierre'>Probar Cierre de Jornada (8:00 PM)</a><br>"
         "👉 <a href='/test/combinacion'>Probar Combinación Diaria</a><br>"
-        "👉 <a href='/test/resumen_repetidos'>Probar Resumen de Repetidos</a>"
+        "👉 <a href='/test/resumen_repetidos'>Probar Resumen de Repetidos</a><br>"
         "👉 <a href='/test/cashea'>Probar Publicidad Cashea</a><br>"
     )
 
-# --- RUTAS DE PRUEBA MANUAL (TESTS) ---
 @app.route('/test/madrugada')
 def test_madrugada():
     enviar_saludo_madrugada()
@@ -256,7 +257,6 @@ def test_cashea():
     enviar_publicidad_cashea()
     return "Prueba de Cashea ejecutada."
 
-
 @app.route('/test/forzar')
 def test_forzar():
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -291,7 +291,6 @@ def limpiar_recomendaciones_diarias():
     ACIERTOS_HOY.clear()
     CONTEO_ANIMALES_HOY.clear()
 
-
 def registrar_recomendacion(numero, etiqueta, dt_recomendacion=None):
     num_str = str(numero).zfill(2)
     if dt_recomendacion is None:
@@ -307,12 +306,10 @@ def enviar_mensaje_automatico():
     global ULTIMO_INDICE_MENSAJE
     if not MENSAJES_AUTOMATICOS:
         return
-    
     indice = random.randint(0, len(MENSAJES_AUTOMATICOS) - 1)
     if len(MENSAJES_AUTOMATICOS) > 1:
         while indice == ULTIMO_INDICE_MENSAJE:
             indice = random.randint(0, len(MENSAJES_AUTOMATICOS) - 1)
-            
     ULTIMO_INDICE_MENSAJE = indice
     enviar_telegram(MENSAJES_AUTOMATICOS[indice], disable_web_preview=True)
 
@@ -320,12 +317,10 @@ def enviar_publicidad_cashea():
     global ULTIMO_INDICE_PUBLICIDAD
     if not PUBLICIDADES_CASHEA:
         return
-    
     indice = random.randint(0, len(PUBLICIDADES_CASHEA) - 1)
     if len(PUBLICIDADES_CASHEA) > 1:
         while indice == ULTIMO_INDICE_PUBLICIDAD:
             indice = random.randint(0, len(PUBLICIDADES_CASHEA) - 1)
-            
     ULTIMO_INDICE_PUBLICIDAD = indice
     enviar_telegram(PUBLICIDADES_CASHEA[indice], disable_web_preview=True)
 
@@ -374,19 +369,16 @@ def generar_imagen_piramide():
     d1 = f"{unique_candidates[0]}-{unique_candidates[1]}-{unique_candidates[2]}"
     d2 = f"{unique_candidates[3]}-{unique_candidates[4]}-{unique_candidates[5]}"
 
-    # Altura optimizada y recortada a 1120 para eliminar el espacio vacío inferior
     img_width, img_height = 1000, 1120
-    image = Image.new("RGB", (img_width, img_height), color=(30, 10, 10))  # Fondo rojo vino elegante
+    image = Image.new("RGB", (img_width, img_height), color=(30, 10, 10))
     draw = ImageDraw.Draw(image)
 
-    # Colores Casino Deluxe (Dorado, Blanco, Morado y Panel Oscuro)
     color_dorado = (212, 175, 55)
     color_dorado_claro = (243, 229, 149)
-    color_morado = (148, 0, 211)  # Morado brillante/neón
+    color_morado = (148, 0, 211)
     color_blanco = (255, 255, 255)
     color_panel = (20, 20, 20)
 
-    # Fuentes adaptadas con respaldo seguro por defecto si falta en Linux
     try:
         font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 40)
         font_sub = ImageFont.truetype("DejaVuSans.ttf", 24)
@@ -398,18 +390,14 @@ def generar_imagen_piramide():
         font_pir = ImageFont.load_default()
         font_data = ImageFont.load_default()
 
-    # Cabecera de Casino
     draw.text((img_width // 2, 45), "AGENCIA FyD", fill=color_dorado, anchor="mm", font=font_title)
     draw.text((img_width // 2, 90), "Trabajamos para tí", fill=color_blanco, anchor="mm", font=font_sub)
     draw.text((img_width // 2, 145), "PIRÁMIDE DEL DÍA", fill=color_morado, anchor="mm", font=font_title)
 
-    # Caja de Fecha Estilo Casino
     draw.rectangle([img_width // 2 - 180, 185, img_width // 2 + 180, 240], fill=color_panel, outline=color_dorado, width=2)
     draw.text((img_width // 2, 212), f"📅  {fecha_str}", fill=color_dorado_claro, anchor="mm", font=font_data)
 
-    # Paneles Laterales de Estadísticas / Sumas por Fila (Estilo Casino)
     panel_bottom = 740
-    # Panel Izquierdo (Datos generales)
     draw.rectangle([40, 290, 280, panel_bottom], fill=color_panel, outline=color_morado, width=2)
     draw.text((160, 315), "★ DATOS ★", fill=color_dorado, anchor="mm", font=font_data)
     draw.text((160, 355), "NÚMEROS USADOS", fill=color_blanco, anchor="mm", font=font_sub)
@@ -423,7 +411,6 @@ def generar_imagen_piramide():
     draw.text((160, 695), "NÚMERO FRECUENTE", fill=color_blanco, anchor="mm", font=font_sub)
     draw.text((160, 730), f"{digitos[0]} (7 VECES)", fill=color_dorado_claro, anchor="mm", font=font_data)
 
-    # Panel Derecho (Suma por Fila)
     draw.rectangle([720, 290, 960, panel_bottom], fill=color_panel, outline=color_morado, width=2)
     draw.text((840, 315), "★ SUMA ★", fill=color_dorado, anchor="mm", font=font_data)
     draw.text((840, 350), "POR FILA", fill=color_dorado, anchor="mm", font=font_data)
@@ -434,7 +421,6 @@ def generar_imagen_piramide():
         draw.text((840, y_suma_pos), f"{idx+1}RA FILA: {suma_fila}", fill=color_blanco, anchor="mm", font=font_sub)
         y_suma_pos += 40
 
-    # Dibujar la Pirámide Central con Círculos Dorados estilo Fichas de Casino
     start_y = 280
     row_height = 54
     center_x = img_width // 2
@@ -448,24 +434,18 @@ def generar_imagen_piramide():
         for j, num in enumerate(f):
             cx = start_x_row + (j * 52) + 24
             cy = start_y + (i * row_height) + 24
-            
-            # Círculo externo dorado (efecto ficha)
             draw.ellipse([cx - circle_radius, cy - circle_radius, cx + circle_radius, cy + circle_radius], fill=color_panel, outline=color_dorado, width=3)
-            # Número dentro del círculo
             draw.text((cx, cy), str(num), fill=color_blanco, anchor="mm", font=font_pir)
 
-    # Caja inferior de Datos Claves (subida para aprovechar el espacio)
     box_top = 760
     draw.rectangle([150, box_top, img_width - 150, box_top + 150], fill=color_panel, outline=color_dorado, width=2)
     draw.text((img_width // 2, box_top + 28), "🔥 DATOS CLAVES PARA HOY:", fill=color_dorado, anchor="mm", font=font_sub)
     draw.text((img_width // 2, box_top + 75), f"📌 {d1}", fill=color_blanco, anchor="mm", font=font_data)
     draw.text((img_width // 2, box_top + 115), f"📌 {d2}", fill=color_blanco, anchor="mm", font=font_data)
 
-    # Pie de página y contacto (ajustado al nuevo límite)
     footer_y = 955
     draw.text((img_width // 2, footer_y), "WHATSAPP: 04249611372", fill=color_dorado_claro, anchor="mm", font=font_sub)
 
-    # Guardar en memoria BytesIO
     bio = BytesIO()
     bio.name = 'piramide_fyd.png'
     image.save(bio, 'PNG')
@@ -474,7 +454,6 @@ def generar_imagen_piramide():
 
 def enviar_piramide_diaria():
     try:
-        dt_pub = datetime.now()
         foto_bio = generar_imagen_piramide()
         url = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
         files = {'photo': foto_bio}
@@ -483,13 +462,7 @@ def enviar_piramide_diaria():
             'caption': f"📢 *REPORTE TÁCTICO - LA PIRÁMIDE*\n\nWHATSAPP: 04249611372\n{ENLACE_CANAL}",
             'parse_mode': 'Markdown'
         }
-        response = requests.post(url, data=data, files=files, timeout=15)
-        if response.status_code == 200:
-            # Registrar números generados en la pirámide si aplica como recomendación
-            # Extraemos los números usados o claves generadas para mantener el registro horario estricto
-            pass
-        else:
-            print(f"⚠️ Error al enviar imagen de pirámide: {response.text}")
+        requests.post(url, data=data, files=files, timeout=15)
     except Exception as e:
         print(f"Error generando/enviando imagen pirámide: {e}")
 
@@ -536,10 +509,8 @@ def obtener_animales_salidos_actuales():
 def seleccionar_analisis_dinamico(cantidad):
     salidos = obtener_animales_salidos_actuales()
     disponibles = [a for a in ANIMALES_POOL if a.split(" - ")[0].zfill(2) not in salidos]
-     
     if len(disponibles) < cantidad:
         disponibles = ANIMALES_POOL
-
     seed_val = int(datetime.now().strftime("%Y%m%d%H%M"))
     rnd = random.Random(seed_val)
     return rnd.sample(disponibles, cantidad)
@@ -707,6 +678,244 @@ def guardar_registros(enviados_set):
     except Exception as e:
         print(f"Error al guardar registros: {e}")
 
+# ==========================================
+# MÓDULO NUEVO: GESTIÓN DE GANADORES (AGENCIA SOFÍA)
+# ==========================================
+
+def cargar_ganadores_persistentes():
+    if os.path.exists(ARCH_GANADORES):
+        try:
+            with open(ARCH_GANADORES, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+def guardar_ganador_persistente(registro):
+    ganadores = cargar_ganadores_persistentes()
+    ganadores.append(registro)
+    try:
+        with open(ARCH_GANADORES, "w", encoding="utf-8") as f:
+            json.dump(ganadores, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"Error al guardar ganadores.json: {e}")
+
+def generar_imagen_tarjeta_ganador(nombre, loteria, numero, premio):
+    img_width, img_height = 1000, 1000
+    image = Image.new("RGB", (img_width, img_height), color=(25, 10, 35)) # Fondo morado elegante Agencia Sofía
+    draw = ImageDraw.Draw(image)
+
+    color_dorado = (212, 175, 55)
+    color_dorado_claro = (243, 229, 149)
+    color_blanco = (255, 255, 255)
+    color_panel = (35, 15, 50)
+
+    try:
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 46)
+        font_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 32)
+        font_data = ImageFont.truetype("DejaVuSans-Bold.ttf", 30)
+        font_winner = ImageFont.truetype("DejaVuSans-Bold.ttf", 38)
+    except:
+        font_title = ImageFont.load_default()
+        font_sub = ImageFont.load_default()
+        font_data = ImageFont.load_default()
+        font_winner = ImageFont.load_default()
+
+    # Cabecera
+    draw.text((img_width // 2, 70), "🏆 ¡TENEMOS GANADOR! 🏆", fill=color_dorado, anchor="mm", font=font_title)
+    draw.text((img_width // 2, 130), "AGENCIA SOFÍA", fill=color_blanco, anchor="mm", font=font_sub)
+
+    # Panel Central de Datos
+    draw.rectangle([100, 180, img_width - 100, 750], fill=color_panel, outline=color_dorado, width=3)
+    
+    fecha_actual = datetime.now().strftime("%d/%m/%Y")
+    
+    y_pos = 240
+    draw.text((img_width // 2, y_pos), f"📅 Fecha: {fecha_actual}", fill=color_dorado_claro, anchor="mm", font=font_data)
+    y_pos += 90
+    draw.text((img_width // 2, y_pos), f"🎯 Lotería: {loteria.upper()}", fill=color_blanco, anchor="mm", font=font_data)
+    y_pos += 90
+    draw.text((img_width // 2, y_pos), f"🔢 Número / Jugada: {numero}", fill=color_dorado_claro, anchor="mm", font=font_data)
+    y_pos += 90
+    draw.text((img_width // 2, y_pos), f"💰 Premio: {premio}", fill=color_blanco, anchor="mm", font=font_data)
+    y_pos += 110
+    draw.text((img_width // 2, y_pos), f"🎉 ¡FELICIDADES, {nombre.upper()}! 🎉", fill=color_dorado, anchor="mm", font=font_winner)
+
+    # Pie de página
+    draw.text((img_width // 2, 850), "Gracias por confiar en Agencia Sofía. 🍀", fill=color_dorado_claro, anchor="mm", font=font_sub)
+    draw.text((img_width // 2, 920), ENLACE_CANAL, fill=color_blanco, anchor="mm", font=font_data)
+
+    bio = BytesIO()
+    bio.name = 'ganador_sofia.png'
+    image.save(bio, 'PNG')
+    bio.seek(0)
+    return bio
+
+@bot.message_handler(commands=['ganador'])
+def cmd_ganador(message):
+    chat_id = message.chat.id
+    ESTADOS_GANADOR[chat_id] = {
+        "paso": "nombre",
+        "datos": {}
+    }
+    bot.send_message(
+        chat_id,
+        "🏆 Vamos a registrar un ganador para **Agencia Sofía**.\n\n"
+        "✍️ Envíame el **nombre del ganador**:",
+        parse_mode="Markdown"
+    )
+
+@bot.message_handler(func=lambda m: m.chat.id in ESTADOS_GANADOR and ESTADOS_GANADOR[m.chat.id]["paso"] in ["nombre", "loteria", "numero", "premio"])
+def procesar_pasos_ganador(message):
+    chat_id = message.chat.id
+    estado = ESTADOS_GANADOR[chat_id]
+    paso_actual = estado["paso"]
+    texto = message.text.strip() if message.text else ""
+
+    if not texto:
+        bot.send_message(chat_id, "⚠️ Por favor, ingresa un texto válido.")
+        return
+
+    if paso_actual == "nombre":
+        estado["datos"]["nombre"] = texto
+        estado["paso"] = "loteria"
+        bot.send_message(chat_id, "🎯 ¿En qué lotería ganó? (Ej: Lotto Activo, Granjita, etc.)")
+    elif paso_actual == "loteria":
+        estado["datos"]["loteria"] = texto
+        estado["paso"] = "numero"
+        bot.send_message(chat_id, "🔢 ¿Cuál fue el número o animalito ganador? (Ej: 25 - Gallina)")
+    elif paso_actual == "numero":
+        estado["datos"]["numero"] = texto
+        estado["paso"] = "premio"
+        bot.send_message(chat_id, "💰 ¿Cuál fue el monto del premio? (Ej: 500 Bs o 20$):")
+    elif paso_actual == "premio":
+        estado["datos"]["premio"] = texto
+        estado["paso"] = "capture"
+        bot.send_message(chat_id, "📸 Ahora envíame el **capture de pago realizado** (como foto). Quedará guardado internamente como comprobante.")
+
+@bot.message_handler(content_types=['photo'], func=lambda m: m.chat.id in ESTADOS_GANADOR and ESTADOS_GANADOR[m.chat.id].get("paso") == "capture")
+def procesar_capture_ganador(message):
+    chat_id = message.chat.id
+    estado = ESTADOS_GANADOR[chat_id]
+
+    # Obtener la foto de mayor resolución
+    file_id = message.photo[-1].file_id
+    estado["datos"]["capture_file_id"] = file_id
+    estado["paso"] = "confirmar"
+
+    datos = estado["datos"]
+    
+    bot.send_message(chat_id, "⏳ Generando tarjeta promocional de **Agencia Sofía**...")
+
+    try:
+        # Generar imagen publicitaria
+        imagen_bio = generar_imagen_tarjeta_ganador(
+            datos["nombre"],
+            datos["loteria"],
+            datos["numero"],
+            datos["premio"]
+        )
+
+        markup = InlineKeyboardMarkup()
+        markup.row(
+            InlineKeyboardButton("✅ PUBLICAR", callback_data="ganador_publicar"),
+            InlineKeyboardButton("❌ CANCELAR", callback_data="ganador_cancelar")
+        )
+
+        caption_preview = (
+            "🔎 **Vista previa del registro de ganador:**\n\n"
+            f"👤 **Nombre:** {datos['nombre']}\n"
+            f"🎯 **Lotería:** {datos['loteria']}\n"
+            f"🔢 **Número:** {datos['numero']}\n"
+            f"💰 **Premio:** {datos['premio']}\n\n"
+            "¿Deseas publicar este ganador en el canal?"
+        )
+
+        bot.send_photo(chat_id, imagen_bio, caption=caption_preview, reply_markup=markup, parse_mode="Markdown")
+    except Exception as e:
+        bot.send_message(chat_id, f"⚠️ Error generando la imagen: {str(e)}")
+        ESTADOS_GANADOR.pop(chat_id, None)
+
+@bot.callback_query_handler(func=lambda call: call.data in ["ganador_publicar", "ganador_cancelar"])
+def callback_publicar_ganador(call):
+    chat_id = call.message.chat.id
+    estado = ESTADOS_GANADOR.get(chat_id)
+
+    if not estado:
+        bot.answer_callback_query(call.id, "⚠️ La sesión ha expirado o ya fue procesada.")
+        return
+
+    if call.data == "ganador_cancelar":
+        ESTADOS_GANADOR.pop(chat_id, None)
+        bot.edit_message_caption(
+            chat_id=chat_id,
+            message_id=call.message.message_id,
+            caption="❌ Registro de ganador cancelado.",
+            reply_markup=None
+        )
+        bot.answer_callback_query(call.id, "Cancelado con éxito.")
+        return
+
+    if call.data == "ganador_publicar":
+        datos = estado["datos"]
+        try:
+            bot.answer_callback_query(call.id, "Publicando ganador...")
+
+            # Re-generar la imagen para enviar al canal público
+            imagen_bio = generar_imagen_tarjeta_ganador(
+                datos["nombre"],
+                datos["loteria"],
+                datos["numero"],
+                datos["premio"]
+            )
+
+            texto_canal = (
+                "🏆 ¡TENEMOS GANADOR! 🏆\n\n"
+                "*AGENCIA SOFÍA*\n\n"
+                f"🎯 Lotería: {datos['loteria']}\n"
+                f"🔢 Número: {datos['numero']}\n"
+                f"💰 Premio: {datos['premio']}\n\n"
+                f"🎉 ¡FELICIDADES, {datos['nombre'].upper()}!\n\n"
+                "Gracias por confiar en Agencia Sofía. 🍀\n"
+                f"{ENLACE_CANAL}"
+            )
+
+            # Publicar en el canal principal configurado
+            url = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
+            files = {'photo': imagen_bio}
+            payload = {
+                'chat_id': CANAL,
+                'caption': texto_canal,
+                'parse_mode': 'Markdown'
+            }
+            requests.post(url, data=payload, files=files, timeout=15)
+
+            # Guardar en ganadores.json con el capture asociado internamente
+            registro_final = {
+                "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "nombre": datos["nombre"],
+                "loteria": datos["loteria"],
+                "numero": datos["numero"],
+                "premio": datos["premio"],
+                "capture_file_id": datos["capture_file_id"]
+            }
+            guardar_ganador_persistente(registro_final)
+
+            bot.edit_message_caption(
+                chat_id=chat_id,
+                message_id=call.message.message_id,
+                caption="✅ ¡Ganador publicado con éxito en el canal y registrado en ganadores.json!",
+                reply_markup=None
+            )
+        except Exception as e:
+            bot.send_message(chat_id, f"⚠️ Error al publicar en el canal: {str(e)}")
+        finally:
+            ESTADOS_GANADOR.pop(chat_id, None)
+
+# ==========================================
+# FIN DEL MÓDULO DE GANADORES
+# ==========================================
+
 def verificar_y_enviar_resultados_individuales():
     enviados_hoy = cargar_registros()
     es_primera_ejecucion = len(enviados_hoy) == 0
@@ -745,8 +954,6 @@ def verificar_y_enviar_resultados_individuales():
                 continue
 
             nombre_loteria_limpio = limpiar_texto(nombre_loteria)
-            loteria_key = nombre_loteria_limpio
-
             nombre_loteria_ind = nombre_loteria_limpio
             for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
                 if sigla in nombre_loteria_limpio.upper() or nombre_loteria_limpio.upper() == sigla:
@@ -775,23 +982,16 @@ def verificar_y_enviar_resultados_individuales():
                     continue
 
                 resultado = limpiar_texto(match_res.group(1)).upper()
-
                 CONTEO_ANIMALES_HOY[resultado] = CONTEO_ANIMALES_HOY.get(resultado, 0) + 1
-
                 numero = resultado.split("-")[0].strip().zfill(2)
-
                 id_resultado = f"{nombre_loteria_ind}_{hora}_{resultado}"
 
-                # Lógica estricta de aciertos por marca de tiempo y unicidad de celebración
                 if numero in RECOMENDADOS_HOY and numero not in ACIERTOS_HOY:
-                    # Construir un objeto datetime para el resultado con fecha de hoy
                     try:
-                        # Parsear hora del sorteo (ej. "09:00 AM")
                         dt_resultado = datetime.strptime(f"{datetime.now().strftime('%Y-%m-%d')} {hora}", "%Y-%m-%d %I:%M %p")
                     except Exception:
                         dt_resultado = datetime.now()
 
-                    # Verificar si existe al menos una recomendación para este número publicada ANTES del resultado
                     cumple_tiempo = False
                     etiqueta_valida = ""
                     for rec in RECOMENDADOS_HOY[numero]:
@@ -809,11 +1009,8 @@ def verificar_y_enviar_resultados_individuales():
                             f"🕒 {hora}\n\n"
                             "🍀 *¡Felicidades a todos los que confiaron en Agencia FyD!*"
                         )
-
                         enviar_telegram(mensaje)
-
                         ACIERTOS_HOY.add(numero)
-                        # También guardamos el identificador del acierto para no repetirlo
                         ACIERTOS_HOY.add(f"ACERTADO_{id_resultado}")
 
                 if es_primera_ejecucion:
@@ -846,11 +1043,9 @@ ultimo_aviso_minuto = ""
 def verificar_minuto():
     global ultimo_aviso_minuto
     ahora = datetime.now()
-     
-    # Restringir el aviso de cierre estrictamente entre las 7:25 AM y las 7:55 PM
     hora_actual_minutos = ahora.hour * 60 + ahora.minute
-    inicio_minutos = 7 * 60 + 25   # 07:25 AM
-    fin_minutos = 19 * 60 + 55     # 07:55 PM
+    inicio_minutos = 7 * 60 + 25
+    fin_minutos = 19 * 60 + 55
 
     if not (inicio_minutos <= hora_actual_minutos <= fin_minutos):
         return
@@ -875,7 +1070,6 @@ def cmd_resumen(message):
 
         soup = BeautifulSoup(respuesta.text, 'html.parser')
         tarjetas = soup.find_all(['div', 'article', 'section'], class_=re.compile(r'card|box|item|lotto|result', re.IGNORECASE))
-
         resumen_por_loterias = {}
 
         for tarjeta in tarjetas:
@@ -920,7 +1114,6 @@ def cmd_resumen(message):
                 for slot in slots_sorteo:
                     try:
                         texto_slot = slot.get_text(" ", strip=True).upper()
-                         
                         match_h = re.search(r'\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b', texto_slot)
                         if not match_h:
                             continue
@@ -981,7 +1174,6 @@ def loop_bot():
     schedule.every().day.at("18:30").do(enviar_tasa_dolar)
     schedule.every().day.at("20:00").do(enviar_mensaje_cierre)
     
-    # Horarios programados para los mensajes automáticos intermedios
     schedule.every().day.at("09:30").do(enviar_mensaje_automatico)
     schedule.every().day.at("10:30").do(enviar_mensaje_automatico)
     schedule.every().day.at("11:30").do(enviar_mensaje_automatico)
@@ -991,17 +1183,14 @@ def loop_bot():
     schedule.every().day.at("17:30").do(enviar_mensaje_automatico)
     schedule.every().day.at("19:30").do(enviar_mensaje_automatico)
     
-    # Horarios programados para las publicidades automáticas de CASHEA (sin chocar con los mensajes importantes)
     schedule.every().day.at("08:00").do(enviar_publicidad_cashea)
     schedule.every().day.at("14:00").do(enviar_publicidad_cashea)
     schedule.every().day.at("16:15").do(enviar_publicidad_cashea)
 
-    # Horario programado para las combinaciones automáticas diarias
     schedule.every().day.at("09:40").do(enviar_combinacion_diaria)
     schedule.every().day.at("13:30").do(enviar_combinacion_diaria)
     schedule.every().day.at("17:30").do(enviar_combinacion_diaria)
 
-    # Horario programado a las 12:01 AM para reiniciar las recomendaciones y conteo diario
     schedule.every().day.at("00:01").do(limpiar_recomendaciones_diarias)
     
     schedule.every(1).minutes.do(verificar_y_enviar_resultados_individuales)
