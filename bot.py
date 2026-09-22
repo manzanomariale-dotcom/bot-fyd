@@ -1324,8 +1324,9 @@ if __name__ == "__main__":
         print(f"Error iniciando polling: {e}")
 
     port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
     
-    app.run(host="0.0.0.0", port=port)ENLACE_CANAL = 'https://t.me/+x4A5d5Jpu44yNzc5'
+    ENLACE_CANAL = 'https://t.me/+x4A5d5Jpu44yNzc5'
 
 ADMIN_IDS = []
 
