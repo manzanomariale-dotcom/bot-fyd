@@ -24,7 +24,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import traceback
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
-import urllib.parse  # 📌 Importado para codificar el mensaje de WhatsApp
+import urllib.parse
 
 # Desactivar advertencias de certificados SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -36,7 +36,6 @@ TOKEN = '7691909067:AAG4EdkF0-_lpefI9ewFpo6AMhqawBZztAM'
 CANAL = '@agenciafyd'
 ENLACE_CANAL = 'https://t.me/+x4A5d5Jpu44yNzc5'
 
-# ID de Administrador o restricciones opcionales para comandos
 ADMIN_IDS = []
 
 bot = telebot.TeleBot(TOKEN)
@@ -44,26 +43,21 @@ bot = telebot.TeleBot(TOKEN)
 URL_LOTERIA = 'https://lotery.winbigvzla.com/resultados'
 URL_BCV = 'https://www.bcv.org.ve/'
 
-# Archivos locales para control persistente
 ARCH_REGISTRO = "resultados_enviados.json"
 ARCH_GANADORES = "ganadores.json"
 ARCH_CASHEA_INDEX = "cashea_index.json"
+ARCH_PENDIENTES = "resultados_pendientes.json"
 
-# ==========================================
-# CONFIGURACIÓN DE WHATSAPP (API O EXTERNO)
-# ==========================================
 WHATSAPP_API_URL = os.environ.get("WHATSAPP_API_URL", "")
 WHATSAPP_API_TOKEN = os.environ.get("WHATSAPP_API_TOKEN", "")
 WHATSAPP_DESTINATION = os.environ.get("WHATSAPP_DESTINATION", "04249611372")
 
-# Variables globales para control
 RECOMENDADOS_HOY = {}
 ACIERTOS_HOY = set()
 CONTEO_ANIMALES_HOY = {}
 ESTADOS_GANADOR = {}
 ULTIMO_INDICE_MENSAJE = -1
 
-# Pool de mensajes automáticos
 MENSAJES_AUTOMATICOS = [
     f"🎯 *Agencia FyD* 🎯\n¡La suerte está de tu lado hoy! No te quedes sin jugar tu animalito favorito.\n📲 WhatsApp: 04249611372\n{ENLACE_CANAL}",
     f"🔥 ¡Activos con la buena energía en *Agencia FyD*! Elige tu animalito y ven a ganar con nosotros.\n📲 WhatsApp: 04249611372",
@@ -77,9 +71,6 @@ MENSAJES_AUTOMATICOS = [
     f"✨ La suerte sonríe a los audaces. ¡Haz tu jugada ahora mismo en *Agencia FyD*!\n📲 WhatsApp: 04249611372"
 ]
 
-# ==========================================
-# BIBLIOTECA DE CASHEA (TELEGRAM Y WHATSAPP)
-# ==========================================
 MENSAJES_CASHEA_TELEGRAM = [
     (
         "💜✨ ¡JUEGA HOY, PAGA DESPUÉS! ✨💜\n"
@@ -130,56 +121,6 @@ MENSAJES_CASHEA_TELEGRAM = [
         "📲 Escríbenos al WhatsApp:\n"
         "04249611372\n"
         f"{ENLACE_CANAL}"
-    ),
-    (
-        "💜✨ *¡NO TE QUEDES SIN JUGAR!* ✨💜\n"
-        "💳 Activa tu *CASHEA* con nosotros\n"
-        "✅ Cómodas cuotas\n"
-        "🎯 Haz tu jugada con Agencia F&D\n"
-        "⚡ Proceso rápido y confiable\n\n"
-        "📲 Consulta tu cupo vía WhatsApp:\n"
-        "04249611372\n"
-        f"{ENLACE_CANAL}"
-    ),
-    (
-        "🔥 *¿CONOCES LOS BENEFICIOS DE CASHEA?* 🔥\n"
-        "💳 Disponible en *Agencia F&D*\n"
-        "💰 Cupos altos para tus animalitos\n"
-        "🎯 Juega hoy, paga después\n"
-        "✅ Servicio 100% confiable\n\n"
-        "📲 Contáctanos al WhatsApp:\n"
-        "04249611372\n"
-        f"{ENLACE_CANAL}"
-    ),
-    (
-        "💜💳 *FACILITAMOS TUS JUGADAS* 💳💜\n"
-        "Usa *CASHEA* en *Agencia F&D*:\n"
-        "⚡ Atención rápida y responsable\n"
-        "✅ Sin inicial\n"
-        "🎯 Cómodas cuotas para tus animalitos\n\n"
-        "📲 Más información por WhatsApp:\n"
-        "04249611372\n"
-        f"{ENLACE_CANAL}"
-    ),
-    (
-        "✨ *JUEGA SEGURO, JUEGA CON CASHEA* ✨\n"
-        "🎯 Todo lo que necesitas en *Agencia F&D*:\n"
-        "💰 Cupos altos\n"
-        "💳 Juega ahora y paga después\n"
-        "⚡ Proceso rápido\n\n"
-        "📲 Escríbenos al WhatsApp:\n"
-        "04249611372\n"
-        f"{ENLACE_CANAL}"
-    ),
-    (
-        "💜🔥 *¡EL PALPITO DE HOY CON CASHEA!* 🔥💜\n"
-        "💳 No dejes pasar el sorteo:\n"
-        "✅ Cómodas cuotas\n"
-        "🎯 Haz tu jugada con Agencia F&D\n"
-        "⚡ Atención rápida y confiable\n\n"
-        "📲 Consulta disponibilidad en WhatsApp:\n"
-        "04249611372\n"
-        f"{ENLACE_CANAL}"
     )
 ]
 
@@ -210,29 +151,11 @@ MENSAJES_CASHEA_WHATSAPP = [
         "1️⃣ Para jugar responde con: *JUGAR*\n"
         "2️⃣ Para consultar tu cupo responde con: *CONSULTAR*\n"
         "📲 04249611372"
-    ),
-    (
-        "🔥 ¡JUEGA con CASHEA EN AGENCIA F&D!\n"
-        "✅ Sin complicaciones ni inicial\n"
-        "⚡ Atención rápida y responsable\n\n"
-        "🎯 *OPCIONES DE ACCIÓN:*\n"
-        "1️⃣ Para jugar responde con: *JUGAR*\n"
-        "2️⃣ Para consultar tu cupo responde con: *CONSULTAR*\n"
-        "📲 04249611372"
-    ),
-    (
-        "🎯 ¿SIN SALDO INMEDIATO?\n"
-        "💳 Usa Cashea con Agencia F&D\n"
-        "💰 Cupos altos y cómodas cuotas\n\n"
-        "🎯 *OPCIONES DE ACCIÓN:*\n"
-        "1️⃣ Para jugar responde con: *JUGAR*\n"
-        "2️⃣ Para consultar tu cupo responde con: *CONSULTAR*\n"
-        "📲 04249611372"
     )
 ]
 
 ANIMALES_POOL = [
-    "00 - Ballena", "0- Delfin","01 - Carnero", "02 - Toro", "03 - Ciempiés", "04 - Alacrán", 
+    "00 - Ballena", "0 - Delfín", "01 - Carnero", "02 - Toro", "03 - Ciempiés", "04 - Alacrán", 
     "05 - León", "06 - Rana", "07 - Perico", "08 - Ratón", "09 - Águila", 
     "10 - Tigre", "11 - Gato", "12 - Caballo", "13 - Mono", "14 - Paloma", 
     "15 - Zorro", "16 - Oso", "17 - Pavo", "18 - Burro", "19 - Chivo", 
@@ -241,16 +164,6 @@ ANIMALES_POOL = [
     "30 - Caimán", "31 - Lapa", "32 - Ardilla", "33 - Pescado", "34 - Venado", 
     "35 - Jirafa", "36 - Culebra"
 ]
-
-TRADUCCION_LOTERIAS = {
-    "L.A": "LOTTO ACTIVO",
-    "GRJ": "GRANJITA",
-    "S.P": "SELVA PLUS",
-    "L.RE": "LOTTO REAL",
-    "GHO": "GUACHARO",
-    "L.CH": "LOTTO CHAIMA",
-    "MJ.M": "MONJE MILLONARIO"
-}
 
 HEADER_FyD = (
     "*AGENCIA F&D*\n"
@@ -268,13 +181,12 @@ def home():
     return (
         f"¡El bot de resultados individuales de la <b>Agencia F&D</b> está activo en el canal {CANAL}!<br><br>"
         "<b>Enlaces de prueba rápida (Test):</b><br>"
-        "👉 <a href='/test/madrugada'>Probar Saludo de Madrugada</a><br>"
+        "👉 <a href='/test/regalo_6am'>Probar Regalo de las 6:00 AM</a><br>"
         "👉 <a href='/test/piramide'>Probar Pirámide Numérica (Imagen)</a><br>"
-        "👉 <a href='/test/regalos'>Probar Regalos del Día</a><br>"
         "👉 <a href='/test/saludo'>Probar Saludo Matutino</a><br>"
         "👉 <a href='/test/estudio_manana'>Probar Análisis de las 8 AM</a><br>"
         "👉 <a href='/test/estudio_mediodia'>Probar Análisis del Mediodía</a><br>"
-        "👉 <a href='/test/estudio_tarde'>Probar Análisis de la Tarde</a><br>"
+        "👉 <a href='/test/estudio_tarde'>Probar Análisis / Cierre de la Tarde</a><br>"
         "👉 <a href='/test/bcv'>Probar Tasa Oficial BCV</a><br>"
         "👉 <a href='/test/sorteo'>Probar Cierre de Sorteo (Min 25/55)</a><br>"
         "👉 <a href='/test/cierre'>Probar Cierre de Jornada (8:00 PM)</a><br>"
@@ -283,20 +195,15 @@ def home():
         "👉 <a href='/test/cashea'>Probar Publicidad Cashea con Botones</a><br>"
     )
 
-@app.route('/test/madrugada')
-def test_madrugada():
-    enviar_saludo_madrugada()
-    return "Prueba de Saludo de Madrugada ejecutada."
+@app.route('/test/regalo_6am')
+def test_regalo_6am():
+    enviar_regalo_6am()
+    return "Prueba de Regalo de las 6:00 AM ejecutada."
 
 @app.route('/test/piramide')
 def test_piramide():
     enviar_piramide_diaria()
     return "Prueba de Pirámide Numérica en Imagen ejecutada."
-
-@app.route('/test/regalos')
-def test_regalos():
-    enviar_regalos_diarios()
-    return "Prueba de Regalos del Día ejecutada."
 
 @app.route('/test/saludo')
 def test_saludo():
@@ -363,9 +270,6 @@ def enviar_telegram(mensaje, disable_web_preview=True, reply_markup=None):
     except Exception as e:
         print(f"⚠️ Excepción de conexión con Telegram: {e}")
 
-# ==========================================
-# MÓDULO DE WHATSAPP
-# ==========================================
 def enviar_whatsapp(mensaje):
     if not WHATSAPP_API_URL:
         print(f"ℹ️ [WhatsApp Simulado/Pendiente de Configuración]: {mensaje[:40]}...")
@@ -385,9 +289,6 @@ def enviar_whatsapp(mensaje):
     except Exception as e:
         print(f"⚠️ Excepción de conexión con WhatsApp API: {e}")
 
-# ==========================================
-# GESTIÓN PERSISTENTE DE ROTACIÓN DE CASHEA
-# ==========================================
 def cargar_estado_cashea():
     if os.path.exists(ARCH_CASHEA_INDEX):
         try:
@@ -434,7 +335,6 @@ def enviar_publicidad_cashea(es_prueba=False):
         idx_wa = (idx_wa + 1) % len(MENSAJES_CASHEA_WHATSAPP)
     mensaje_wa = MENSAJES_CASHEA_WHATSAPP[idx_wa]
 
-    # 📌 Enlaces directos a WhatsApp para los botones en línea
     numero_wa = "584249611372"
     msg_jugar = urllib.parse.quote("Hola, quiero jugar con Cashea en Agencia F&D.")
     msg_consultar = urllib.parse.quote("Hola, quiero consultar mi cupo o disponibilidad de Cashea en Agencia F&D.")
@@ -442,7 +342,6 @@ def enviar_publicidad_cashea(es_prueba=False):
     url_jugar = f"https://wa.me/{numero_wa}?text={msg_jugar}"
     url_consultar = f"https://wa.me/{numero_wa}?text={msg_consultar}"
 
-    # Crear botones inline con URL hacia WhatsApp
     markup_cashea = InlineKeyboardMarkup()
     markup_cashea.row(
         InlineKeyboardButton("🎯 JUGAR CON CASHEA", url=url_jugar),
@@ -457,9 +356,6 @@ def enviar_publicidad_cashea(es_prueba=False):
         siguiente_wa = (idx_wa + 1) % len(MENSAJES_CASHEA_WHATSAPP)
         guardar_estado_cashea(siguiente_tg, siguiente_wa)
 
-# ==========================================
-# COMANDOS ADMINISTRATIVOS DE CASHEA
-# ==========================================
 @bot.message_handler(commands=['cashea'])
 def cmd_cashea_inmediato(message):
     if ADMIN_IDS and message.from_user.id not in ADMIN_IDS:
@@ -522,11 +418,19 @@ def enviar_mensaje_automatico():
     ULTIMO_INDICE_MENSAJE = indice
     enviar_telegram(MENSAJES_AUTOMATICOS[indice], disable_web_preview=True)
 
-def enviar_saludo_madrugada():
+def enviar_regalo_6am():
+    dt_pub = datetime.now()
+    regalo = seleccionar_analisis_dinamico(1)[0]
+    numero = regalo.split(" - ")[0].strip()
+    registrar_recomendacion(numero, "🎁 Regalo de las 6:00 AM", dt_pub)
+
     enviar_telegram(
-        "🎯 AGENCIA F&D 🎯\n\n"
-        "*¡Activados desde temprano! 🌟 Que este día nos traiga mucha suerte y grandes jugadas. ¡Muy buenos días! 🔥*\n"
-        "WHATSAPP: 04249611372",
+        "🎯 *AGENCIA F&D* 🎯\n\n"
+        "☀️ *¡Muy buenos días!* Arrancamos el día con la mejor actitud y la mejor energía para ganar.\n\n"
+        f"🎁 *El Regalo de las 6:00 AM:* `{regalo}`\n\n"
+        "📲 WHATSAPP: 04249611372\n"
+        f"{ENLACE_CANAL}\n"
+        "¡Mucho éxito en tus jugadas de hoy! 🍀🔥",
         disable_web_preview=True
     )
 
@@ -664,49 +568,22 @@ def enviar_piramide_diaria():
     except Exception as e:
         print(f"Error generando/enviando imagen pirámide: {e}")
 
-def enviar_regalos_diarios():
-    dt_pub = datetime.now()
-    fecha_str = dt_pub.strftime("%d/%m/%Y")
-    seed_val = int(dt_pub.strftime("%Y%m%d")) + 99
-    rnd = random.Random(seed_val)
-    regalos_seleccionados = rnd.sample(ANIMALES_POOL, 3)
-     
-    for animal in regalos_seleccionados:
-        numero = animal.split(" - ")[0].zfill(2)
-        registrar_recomendacion(numero, "🎁 Regalo del Día", dt_pub)
-
-    mensaje_regalos = (
-        "🎁 *LOS REGALOS DE LA AGENCIA F&D* 🎁\n"
-        f"📅 Fecha: {fecha_str}\n\n"
-        "¡Los fijos recomendados para reventar la banca hoy:\n\n"
-        f"🌟 *1er Regalo:* {regalos_seleccionados[0]}\n"
-        f"🌟 *2do Regalo:* {regalos_seleccionados[1]}\n"
-        f"🌟 *3er Regalo:* {regalos_seleccionados[2]}\n\n"
-        "📲 WHATSAPP: 04249611372\n"
-        f"{ENLACE_CANAL}\n\n"
-        "¡Mucha suerte en tus jugadas! 🍀✨"
-    )
-    enviar_telegram(mensaje_regalos, disable_web_preview=True)
-
 def obtener_animales_salidos_actuales():
     salidos = set()
     try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=10)
-        if respuesta.status_code == 200:
-            soup = BeautifulSoup(respuesta.text, 'html.parser')
-            texto_total = soup.get_text(" ", strip=True)
-            matches = re.findall(r'(\d{1,2})\s*-\s*([A-ZÁÉÍÓÚÑa-zñáéíóú]+)', texto_total)
-            for m in matches:
-                num_str = f"{int(m[0]):02d}" if m[0].isdigit() else m[0]
-                salidos.add(num_str)
+        resultados_map = obtener_resultados_winbig()
+        for loteria, sorteos in resultados_map.items():
+            for hora, res in sorteos.items():
+                if "PENDIENTE" not in res:
+                    num_partes = res.split("-")[0].strip()
+                    salidos.add(num_partes)
     except Exception as e:
         print(f"Error obteniendo salidos para análisis: {e}")
     return salidos
 
 def seleccionar_analisis_dinamico(cantidad):
     salidos = obtener_animales_salidos_actuales()
-    disponibles = [a for a in ANIMALES_POOL if a.split(" - ")[0].zfill(2) not in salidos]
+    disponibles = [a for a in ANIMALES_POOL if a.split(" - ")[0].strip() not in salidos]
     if len(disponibles) < cantidad:
         disponibles = ANIMALES_POOL
     seed_val = int(datetime.now().strftime("%Y%m%d%H%M"))
@@ -716,7 +593,7 @@ def seleccionar_analisis_dinamico(cantidad):
 def enviar_combinacion_diaria():
     dt_pub = datetime.now()
     salidos = obtener_animales_salidos_actuales()
-    disponibles = [a for a in ANIMALES_POOL if a.split(" - ")[0].zfill(2) not in salidos]
+    disponibles = [a for a in ANIMALES_POOL if a.split(" - ")[0].strip() not in salidos]
     if len(disponibles) < 7:
         disponibles = ANIMALES_POOL
 
@@ -733,11 +610,11 @@ def enviar_combinacion_diaria():
     trip3 = seleccionados[6]
 
     for animal in seleccionados:
-        num = animal.split(" - ")[0].zfill(2)
+        num = animal.split(" - ")[0].strip()
         registrar_recomendacion(num, "🎯 Combinación Especial F&D", dt_pub)
 
-    par_str = f"{par1.split(' - ')[0]} - {par2.split(' - ')[0]}"
-    trip_str = f"{trip1.split(' - ')[0]} - {trip2.split(' - ')[0]} - {trip3.split(' - ')[0]}"
+    par_str = f"{par1.split(' - ')[0].strip()} - {par2.split(' - ')[0].strip()}"
+    trip_str = f"{trip1.split(' - ')[0].strip()} - {trip2.split(' - ')[0].strip()} - {trip3.split(' - ')[0].strip()}"
 
     mensaje = (
         "🎯 *COMBINACIÓN GANADORA - AGENCIA F&D* 🎯\n"
@@ -755,7 +632,7 @@ def enviar_estudio_8am():
     dt_pub = datetime.now()
     analisis = seleccionar_analisis_dinamico(2)
     for animal in analisis:
-        numero = animal.split(" - ")[0].zfill(2)
+        numero = animal.split(" - ")[0].strip()
         registrar_recomendacion(numero, "🔍 Análisis 8:15 AM", dt_pub)
 
     mensaje = (
@@ -772,15 +649,15 @@ def enviar_estudio_mediodia():
     dt_pub = datetime.now()
     analisis = seleccionar_analisis_dinamico(2)
     for animal in analisis:
-        numero = animal.split(" - ")[0].zfill(2)
+        numero = animal.split(" - ")[0].strip()
         registrar_recomendacion(numero, "☀️ Análisis Mediodía", dt_pub)
 
     tripleta = seleccionar_analisis_dinamico(3)
     for animal in tripleta:
-        numero = animal.split(" - ")[0].zfill(2)
+        numero = animal.split(" - ")[0].strip()
         registrar_recomendacion(numero, "🎯 Tripleta Mediodía", dt_pub)
 
-    t_str = f"{tripleta[0].split(' - ')[0]} - {tripleta[1].split(' - ')[0]} - {tripleta[2].split(' - ')[0]}"
+    t_str = f"{tripleta[0].split(' - ')[0].strip()} - {tripleta[1].split(' - ')[0].strip()} - {tripleta[2].split(' - ')[0].strip()}"
      
     mensaje = (
         "🎯 *AGENCIA F&D* 🎯\n"
@@ -797,7 +674,7 @@ def enviar_estudio_tarde():
     dt_pub = datetime.now()
     analisis = seleccionar_analisis_dinamico(2)
     for animal in analisis:
-        numero = animal.split(" - ")[0].zfill(2)
+        numero = animal.split(" - ")[0].strip()
         registrar_recomendacion(numero, "🌇 Análisis Tarde", dt_pub)
 
     mensaje = (
@@ -876,9 +753,105 @@ def guardar_registros(enviados_set):
     except Exception as e:
         print(f"Error al guardar registros: {e}")
 
+def cargar_pendientes():
+    if os.path.exists(ARCH_PENDIENTES):
+        try:
+            with open(ARCH_PENDIENTES, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if data.get("fecha") == datetime.now().strftime("%d-%m-%Y"):
+                    return data.get("pendientes", {})
+        except Exception:
+            pass
+    return {}
+
+def guardar_pendientes(pendientes_dict):
+    data = {
+        "fecha": datetime.now().strftime("%d-%m-%Y"),
+        "pendientes": pendientes_dict
+    }
+    try:
+        with open(ARCH_PENDIENTES, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"Error al guardar pendientes: {e}")
+
 # ==========================================
-# MÓDULO: GESTIÓN DE GANADORES (AGENCIA F&D)
+# MÓDULO CENTRAL DE SCRAPING DINÁMICO
 # ==========================================
+def obtener_resultados_winbig():
+    resultados_map = {}
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
+        if respuesta.status_code != 200:
+            return resultados_map
+
+        soup = BeautifulSoup(respuesta.text, 'html.parser')
+        tarjetas = soup.find_all(['div', 'article', 'section'], class_=re.compile(r'card|box|item|lotto|result', re.IGNORECASE))
+
+        for tarjeta in tarjetas:
+            nombre_loteria = None
+            posibles_titulos = tarjeta.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'span', 'div', 'strong', 'b'], class_=re.compile(r'title|header|name|lotto|text', re.IGNORECASE))
+            for pt in posibles_titulos:
+                t_text = limpiar_texto(pt.get_text(" ", strip=True)).upper()
+                if t_text and len(t_text) > 2 and not re.search(r'\d{1,2}:\d{2}', t_text) and "PENDIENTE" not in t_text:
+                    if t_text not in ["WINBIG", "RESULTADOS", "RESULTADOS ANIMALITOS", "ANIMALITOS"]:
+                        nombre_loteria = t_text
+                        break
+
+            if not nombre_loteria:
+                lineas = [l.strip().upper() for l in tarjeta.get_text("\n", strip=True).split("\n") if l.strip()]
+                for linea in lineas:
+                    linea_limpia = limpiar_texto(linea)
+                    if linea_limpia and len(linea_limpia) > 2 and not re.search(r'\d{1,2}:\d{2}', linea_limpia) and "PENDIENTE" not in linea_limpia:
+                        if linea_limpia not in ["WINBIG", "RESULTADOS", "RESULTADOS ANIMALITOS", "ANIMALITOS"]:
+                            nombre_loteria = linea_limpia
+                            break
+
+            if not nombre_loteria:
+                continue
+
+            if "RULETA ROYAL" in nombre_loteria.upper() or nombre_loteria.upper() in ["RESULTADOS", "ANIMALITOS"]:
+                continue
+
+            if nombre_loteria not in resultados_map:
+                resultados_map[nombre_loteria] = {}
+
+            slots_sorteo = tarjeta.find_all(['div', 'li', 'span', 'tr'], class_=re.compile(r'item|slot|draw|row|col', re.IGNORECASE))
+            if not slots_sorteo:
+                slots_sorteo = [tarjeta]
+
+            for slot in slots_sorteo:
+                texto_slot = limpiar_texto(slot.get_text(" ", strip=True)).upper()
+                match_h = re.search(r'\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b', texto_slot)
+                if not match_h:
+                    continue
+                hora = match_h.group(1).upper()
+
+                if "PENDIENTE" in texto_slot:
+                    resultados_map[nombre_loteria][hora] = "⏳ Pendiente"
+                    continue
+
+                match_res = re.search(r'\b(00|0|\d{1,2})\s*-\s*([A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)\b', texto_slot)
+                if match_res:
+                    num_crudo = match_res.group(1)
+                    animal_texto = match_res.group(2).strip().capitalize()
+                    
+                    if num_crudo == "00":
+                        num_str = "00"
+                    elif num_crudo == "0":
+                        num_str = "0"
+                    else:
+                        num_str = str(int(num_crudo)).zfill(2)
+
+                    resultado_formateado = f"{num_str} - {animal_texto}"
+                    resultados_map[nombre_loteria][hora] = resultado_formateado
+
+    except Exception as e:
+        print(f"Error en obtener_resultados_winbig: {e}")
+
+    return resultados_map
+
 def cargar_ganadores_persistentes():
     if os.path.exists(ARCH_GANADORES):
         try:
@@ -1047,114 +1020,78 @@ def verificar_y_enviar_resultados_individuales():
     es_primera_ejecucion = len(enviados_hoy) == 0
      
     try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
-        if respuesta.status_code != 200:
+        resultados_actuales = obtener_resultados_winbig()
+        if not resultados_actuales:
             return
 
-        soup = BeautifulSoup(respuesta.text, 'html.parser')
-        tarjetas = soup.find_all(['div', 'article', 'section'], class_=re.compile(r'card|box|item|lotto|result', re.IGNORECASE))
-
+        pendientes = cargar_pendientes()
+        nuevos_pendientes = {}
         hubo_cambios = False
         nuevos_para_guardar = set(enviados_hoy)
+        fecha_hoy_str = datetime.now().strftime("%Y-%m-%d")
 
-        for tarjeta in tarjetas:
-            nombre_loteria = ""
-            posibles_titulos = tarjeta.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'span', 'div', 'strong', 'b'], class_=re.compile(r'title|header|name|lotto|text', re.IGNORECASE))
-            for pt in posibles_titulos:
-                t_text = pt.get_text(" ", strip=True).upper()
-                if t_text and len(t_text) > 2 and not re.search(r'\d{1,2}:\d{2}', t_text) and "PENDIENTE" not in t_text:
-                    if t_text not in ["WINBIG", "RESULTADOS", "RESULTADOS ANIMALITOS", "ANIMALITOS"]:
-                        nombre_loteria = t_text
-                        break
-
-            if not nombre_loteria:
-                lineas = [l.strip().upper() for l in tarjeta.get_text("\n", strip=True).split("\n") if l.strip()]
-                for linea in lineas:
-                    if len(linea) > 2 and not re.search(r'\d{1,2}:\d{2}', linea) and "PENDIENTE" not in linea and "-" not in linea:
-                        if linea not in ["RESULTADOS ANIMALITOS", "ANIMALITOS", "RESULTADOS"]:
-                            nombre_loteria = linea
-                            break
-
-            if not nombre_loteria or len(nombre_loteria) > 40:
-                continue
-
-            nombre_loteria_limpio = limpiar_texto(nombre_loteria)
-            nombre_loteria_ind = nombre_loteria_limpio
-            for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
-                if sigla in nombre_loteria_limpio.upper() or nombre_loteria_limpio.upper() == sigla:
-                    nombre_loteria_ind = nombre_largo
-                    break
-
-            if "RULETA ROYAL" in nombre_loteria_limpio.upper() or "RESULTADOS" in nombre_loteria_limpio.upper():
-                continue
-
-            slots_sorteo = tarjeta.find_all(['div', 'li', 'span', 'tr'], class_=re.compile(r'item|slot|draw|row|col', re.IGNORECASE))
-            if not slots_sorteo:
-                slots_sorteo = [tarjeta]
-
-            for slot in slots_sorteo:
-                texto_slot = slot.get_text(" ", strip=True).upper()
-                if "PENDIENTE" in texto_slot:
+        for nombre_loteria_ind, sorteos in resultados_actuales.items():
+            for hora, resultado in sorteos.items():
+                if "PENDIENTE" in resultado:
                     continue
 
-                match_h = re.search(r'\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b', texto_slot)
-                if not match_h:
-                    continue
-                hora = match_h.group(1).upper()
+                id_sorteo = f"{fecha_hoy_str}|{nombre_loteria_ind}|{hora}"
+                id_resultado_completo = f"{nombre_loteria_ind}_{hora}_{resultado}"
 
-                match_res = re.search(r'(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)', texto_slot)
-                if not match_res:
+                if id_resultado_completo in enviados_hoy:
                     continue
 
-                resultado = limpiar_texto(match_res.group(1)).upper()
-                CONTEO_ANIMALES_HOY[resultado] = CONTEO_ANIMALES_HOY.get(resultado, 0) + 1
-                numero = resultado.split("-")[0].strip().zfill(2)
-                id_resultado = f"{nombre_loteria_ind}_{hora}_{resultado}"
+                if id_sorteo in pendientes:
+                    valor_anterior = pendientes[id_sorteo]
+                    if valor_anterior == resultado:
+                        if es_primera_ejecucion:
+                            nuevos_para_guardar.add(id_resultado_completo)
+                        else:
+                            numero = resultado.split("-")[0].strip()
+                            if numero in RECOMENDADOS_HOY and numero not in ACIERTOS_HOY:
+                                try:
+                                    dt_resultado = datetime.strptime(f"{fecha_hoy_str} {hora}", "%Y-%m-%d %I:%M %p")
+                                except Exception:
+                                    dt_resultado = datetime.now()
 
-                if numero in RECOMENDADOS_HOY and numero not in ACIERTOS_HOY:
-                    try:
-                        dt_resultado = datetime.strptime(f"{datetime.now().strftime('%Y-%m-%d')} {hora}", "%Y-%m-%d %I:%M %p")
-                    except Exception:
-                        dt_resultado = datetime.now()
+                                cumple_tiempo = False
+                                etiqueta_valida = ""
+                                for rec in RECOMENDADOS_HOY[numero]:
+                                    if dt_resultado > rec["tiempo"]:
+                                        cumple_tiempo = True
+                                        etiqueta_valida = rec["etiqueta"]
+                                        break
 
-                    cumple_tiempo = False
-                    etiqueta_valida = ""
-                    for rec in RECOMENDADOS_HOY[numero]:
-                        if dt_resultado > rec["tiempo"]:
-                            cumple_tiempo = True
-                            etiqueta_valida = rec["etiqueta"]
-                            break
+                                if cumple_tiempo and id_resultado_completo not in [a.get("id_res") for a in list(ACIERTOS_HOY) if isinstance(a, dict)]:
+                                    mensaje_acierto = (
+                                        "🎉🎉 *¡ACERTAMOS!* 🎉🎉\n\n"
+                                        f"✅ {etiqueta_valida}\n\n"
+                                        f"🎯 *{resultado}*\n"
+                                        f"🎲 {nombre_loteria_ind}\n"
+                                        f"🕒 {hora}\n\n"
+                                        "🍀 *¡Felicidades a todos los que confiaron en Agencia F&D!*"
+                                    )
+                                    enviar_telegram(mensaje_acierto)
+                                    ACIERTOS_HOY.add(numero)
+                                    ACIERTOS_HOY.add(f"ACERTADO_{id_resultado_completo}")
 
-                    if cumple_tiempo and id_resultado not in [a.get("id_res") for a in list(ACIERTOS_HOY) if isinstance(a, dict)]:
-                        mensaje = (
-                            "🎉🎉 *¡ACERTAMOS!* 🎉🎉\n\n"
-                            f"✅ {etiqueta_valida}\n\n"
-                            f"🎯 *{resultado}*\n"
-                            f"🎲 {nombre_loteria_ind}\n"
-                            f"🕒 {hora}\n\n"
-                            "🍀 *¡Felicidades a todos los que confiaron en Agencia F&D!*"
-                        )
-                        enviar_telegram(mensaje)
-                        ACIERTOS_HOY.add(numero)
-                        ACIERTOS_HOY.add(f"ACERTADO_{id_resultado}")
+                            hora_actual_str = datetime.now().strftime("%I:%M %p")
+                            mensaje = HEADER_FyD.format(
+                                hora_str=hora_actual_str,
+                                nombre_loteria=nombre_loteria_ind,
+                                hora=hora,
+                                resultado=resultado
+                            )
+                            enviar_telegram(mensaje)
+                            nuevos_para_guardar.add(id_resultado_completo)
+                            hubo_cambios = True
+                            time.sleep(1.5)
+                    else:
+                        nuevos_pendientes[id_sorteo] = resultado
+                else:
+                    nuevos_pendientes[id_sorteo] = resultado
 
-                if es_primera_ejecucion:
-                    nuevos_para_guardar.add(id_resultado)
-                    continue
-
-                if id_resultado not in enviados_hoy:
-                    hora_actual_str = datetime.now().strftime("%I:%M %p")
-                    mensaje = HEADER_FyD.format(
-                        hora_str=hora_actual_str,
-                        nombre_loteria=nombre_loteria_ind,
-                        hora=hora,
-                        resultado=resultado
-                    )
-                    enviar_telegram(mensaje)
-                    nuevos_para_guardar.add(id_resultado)
-                    hubo_cambios = True
-                    time.sleep(1.5)
+        guardar_pendientes(nuevos_pendientes)
 
         if es_primera_ejecucion:
             guardar_registros(nuevos_para_guardar)
@@ -1188,74 +1125,7 @@ def cmd_resumen(message):
     try:
         bot.reply_to(message, "🔍 Consultando resumen de resultados actual, por favor espera...")
          
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        respuesta = requests.get(URL_LOTERIA, headers=headers, timeout=15)
-        if respuesta.status_code != 200:
-            bot.reply_to(message, "⚠️ No se pudo conectar con la página de resultados en este momento.")
-            return
-
-        soup = BeautifulSoup(respuesta.text, 'html.parser')
-        tarjetas = soup.find_all(['div', 'article', 'section'], class_=re.compile(r'card|box|item|lotto|result', re.IGNORECASE))
-        resumen_por_loterias = {}
-
-        for tarjeta in tarjetas:
-            try:
-                nombre_loteria = ""
-                posibles_titulos = tarjeta.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'span', 'div', 'strong', 'b'], class_=re.compile(r'title|header|name|lotto|text', re.IGNORECASE))
-                for pt in posibles_titulos:
-                    t_text = pt.get_text(" ", strip=True).upper()
-                    if t_text and len(t_text) > 2 and not re.search(r'\d{1,2}:\d{2}', t_text) and "PENDIENTE" not in t_text:
-                        if t_text not in ["WINBIG", "RESULTADOS", "RESULTADOS ANIMALITOS", "ANIMALITOS"]:
-                            nombre_loteria = t_text
-                            break
-
-                if not nombre_loteria:
-                    lineas = [l.strip().upper() for l in tarjeta.get_text("\n", strip=True).split("\n") if l.strip()]
-                    for linea in lineas:
-                        if len(linea) > 2 and not re.search(r'\d{1,2}:\d{2}', linea) and "PENDIENTE" not in linea and "-" not in linea:
-                            if linea not in ["RESULTADOS ANIMALITOS", "ANIMALITOS", "RESULTADOS"]:
-                                nombre_loteria = linea
-                                break
-
-                if not nombre_loteria or len(nombre_loteria) > 40:
-                    continue
-
-                nombre_loteria = limpiar_texto(nombre_loteria)
-                 
-                for sigla, nombre_largo in TRADUCCION_LOTERIAS.items():
-                    if sigla in nombre_loteria.upper() or nombre_loteria.upper() == sigla:
-                        nombre_loteria = nombre_largo
-                        break
-
-                if "RULETA ROYAL" in nombre_loteria.upper() or "RESULTADOS" in nombre_loteria.upper():
-                    continue
-
-                if nombre_loteria not in resumen_por_loterias:
-                    resumen_por_loterias[nombre_loteria] = []
-
-                slots_sorteo = tarjeta.find_all(['div', 'li', 'span', 'tr'], class_=re.compile(r'item|slot|draw|row|col', re.IGNORECASE))
-                if not slots_sorteo:
-                    slots_sorteo = [tarjeta]
-
-                for slot in slots_sorteo:
-                    try:
-                        texto_slot = slot.get_text(" ", strip=True).upper()
-                        match_h = re.search(r'\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b', texto_slot)
-                        if not match_h:
-                            continue
-                        hora = match_h.group(1).upper()
-
-                        if "PENDIENTE" in texto_slot:
-                            resumen_por_loterias[nombre_loteria].append(f"• {hora} ➔ ⏳ Pendiente")
-                        else:
-                            match_res = re.search(r'(\d{1,2}\s-\s[A-ZÁÉÍÓÚÑa-zñáéíóú]+(?:\s+[A-ZÁÉÍÓÚÑa-zñáéíóú]+)?)', texto_slot)
-                            if match_res:
-                                resultado = limpiar_texto(match_res.group(1)).upper()
-                                resumen_por_loterias[nombre_loteria].append(f"• {hora} ➔ {resultado}")
-                    except Exception:
-                        continue
-            except Exception:
-                continue
+        resumen_por_loterias = obtener_resultados_winbig()
 
         if not resumen_por_loterias:
             bot.reply_to(message, "⚠️ No se encontraron resultados disponibles en este momento.")
@@ -1269,11 +1139,11 @@ def cmd_resumen(message):
             f"📅 Fecha: {fecha_hoy}\n\n"
         )
 
-        for loteria, items in resumen_por_loterias.items():
-            if items:
+        for loteria, sorteos in resumen_por_loterias.items():
+            if sorteos:
                 texto_final += f"🎲 *{loteria}*\n"
-                for item in items:
-                    texto_final += f"  {item}\n"
+                for hora, res in sorteos.items():
+                    texto_final += f"  • {hora} ➔ {res}\n"
                 texto_final += "\n"
 
         texto_final += f"📲 *WHATSAPP:* 04249611372\n{ENLACE_CANAL}"
@@ -1289,8 +1159,9 @@ def cmd_resumen(message):
         bot.reply_to(message, f"⚠️ Error técnico: {str(e)}")
 
 def loop_bot():
+    # Programación principal con el Regalo de las 6:00 AM incluido
+    schedule.every().day.at("06:00").do(enviar_regalo_6am)
     schedule.every().day.at("06:31").do(enviar_piramide_diaria)
-    schedule.every().day.at("06:45").do(enviar_regalos_diarios)
     schedule.every().day.at("07:00").do(enviar_saludo_matutino)
      
     schedule.every().day.at("08:15").do(enviar_estudio_8am)
@@ -1309,7 +1180,6 @@ def loop_bot():
     schedule.every().day.at("17:30").do(enviar_mensaje_automatico)
     schedule.every().day.at("19:30").do(enviar_mensaje_automatico)
     
-    # Horarios programados para Cashea (dentro de la franja 8:20 AM - 4:30 PM)
     schedule.every().day.at("08:30").do(enviar_publicidad_cashea)
     schedule.every().day.at("10:15").do(enviar_publicidad_cashea)
     schedule.every().day.at("12:00").do(enviar_publicidad_cashea)
